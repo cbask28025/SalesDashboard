@@ -969,7 +969,7 @@ function ImportsTab() {
 function SettingsTab() {
   const [settings, setSettings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(null)
 
   useEffect(() => {
     loadSettings()
@@ -985,14 +985,19 @@ function SettingsTab() {
     setLoading(false)
   }
 
-  async function updateSetting(id, newValue) {
-    setSaving(true)
+  function handleChange(id, newValue) {
+    setSettings(settings.map(s => 
+      s.id === id ? { ...s, value: newValue } : s
+    ))
+  }
+
+  async function saveSetting(id, newValue) {
+    setSaving(id)
     await supabase
       .from('settings')
       .update({ value: newValue, updated_at: new Date().toISOString() })
       .eq('id', id)
-    await loadSettings()
-    setSaving(false)
+    setSaving(null)
   }
 
   if (loading) {
@@ -1026,7 +1031,8 @@ function SettingsTab() {
               min="1"
               max="30"
               value={setting.value}
-              onChange={(e) => updateSetting(setting.id, e.target.value)}
+              onChange={(e) => handleChange(setting.id, e.target.value)}
+              onBlur={(e) => saveSetting(setting.id, e.target.value)}
               style={{ 
                 padding: '10px 15px', 
                 background: '#27272a', 
@@ -1038,6 +1044,7 @@ function SettingsTab() {
               }}
             />
             <span style={{ marginLeft: '10px', color: '#a1a1aa' }}>days</span>
+            {saving === setting.id && <span style={{ marginLeft: '10px', color: '#10b981' }}>Saving...</span>}
           </div>
         ))}
       </div>
@@ -1056,7 +1063,8 @@ function SettingsTab() {
               min="1"
               max="20"
               value={setting.value}
-              onChange={(e) => updateSetting(setting.id, e.target.value)}
+              onChange={(e) => handleChange(setting.id, e.target.value)}
+              onBlur={(e) => saveSetting(setting.id, e.target.value)}
               style={{ 
                 padding: '10px 15px', 
                 background: '#27272a', 
@@ -1068,13 +1076,10 @@ function SettingsTab() {
               }}
             />
             <span style={{ marginLeft: '10px', color: '#a1a1aa' }}>{setting.key.includes('opens') ? 'opens' : 'clicks'}</span>
+            {saving === setting.id && <span style={{ marginLeft: '10px', color: '#10b981' }}>Saving...</span>}
           </div>
         ))}
       </div>
-
-      {saving && (
-        <p style={{ marginTop: '15px', color: '#10b981' }}>Saving...</p>
-      )}
     </div>
   )
 }
