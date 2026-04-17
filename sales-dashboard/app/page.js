@@ -19,6 +19,7 @@ const Icons = {
   TrendingUp: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
   Search: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   ExternalLink: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+  Settings: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
 }
 
 export default function Dashboard() {
@@ -94,6 +95,7 @@ export default function Dashboard() {
     { id: 'replies', label: 'Recent Replies', icon: Icons.MessageSquare },
     { id: 'calls', label: 'Voice Metrics', icon: Icons.Phone },
     { id: 'imports', label: 'Import History', icon: Icons.History },
+    { id: 'settings', label: 'Settings', icon: Icons.Settings },
   ]
 
   return (
@@ -155,6 +157,7 @@ export default function Dashboard() {
                 {activeTab === 'replies' && <RepliesTab />}
                 {activeTab === 'calls' && <CallsTab />}
                 {activeTab === 'imports' && <ImportsTab />}
+                {activeTab === 'settings' && <SettingsTab />}
               </>
             )}
           </main>
@@ -958,6 +961,119 @@ function ImportsTab() {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  )
+}
+
+function SettingsTab() {
+  const [settings, setSettings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  async function loadSettings() {
+    if (!supabase) return
+    const { data } = await supabase
+      .from('settings')
+      .select('*')
+      .order('key')
+    setSettings(data || [])
+    setLoading(false)
+  }
+
+  async function updateSetting(id, newValue) {
+    setSaving(true)
+    await supabase
+      .from('settings')
+      .update({ value: newValue, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    await loadSettings()
+    setSaving(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h2>Settings</h2>
+          <p>Configure email sequence timing and thresholds</p>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginBottom: '20px', color: '#10b981' }}>Email Sequence Timing</h3>
+        
+        {settings.filter(s => s.key.includes('days_between')).map(setting => (
+          <div key={setting.id} style={{ marginBottom: '20px', padding: '15px', background: '#18181b', borderRadius: '8px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+              {setting.key === 'days_between_email_1_and_2' ? 'Days between Email 1 and Email 2' : 'Days between Email 2 and Email 3'}
+            </label>
+            <p style={{ color: '#71717a', fontSize: '14px', marginBottom: '10px' }}>{setting.description}</p>
+            <input
+              type="number"
+              min="1"
+              max="30"
+              value={setting.value}
+              onChange={(e) => updateSetting(setting.id, e.target.value)}
+              style={{ 
+                padding: '10px 15px', 
+                background: '#27272a', 
+                border: '1px solid #3f3f46', 
+                borderRadius: '6px', 
+                color: 'white',
+                width: '100px',
+                fontSize: '16px'
+              }}
+            />
+            <span style={{ marginLeft: '10px', color: '#a1a1aa' }}>days</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{ marginTop: '20px' }}>
+        <h3 style={{ marginBottom: '20px', color: '#f59e0b' }}>Hot Lead Thresholds</h3>
+        
+        {settings.filter(s => s.key.includes('hot_threshold')).map(setting => (
+          <div key={setting.id} style={{ marginBottom: '20px', padding: '15px', background: '#18181b', borderRadius: '8px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+              {setting.key === 'hot_threshold_opens' ? 'Opens to become Hot' : 'Clicks to become Hot'}
+            </label>
+            <p style={{ color: '#71717a', fontSize: '14px', marginBottom: '10px' }}>{setting.description}</p>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={setting.value}
+              onChange={(e) => updateSetting(setting.id, e.target.value)}
+              style={{ 
+                padding: '10px 15px', 
+                background: '#27272a', 
+                border: '1px solid #3f3f46', 
+                borderRadius: '6px', 
+                color: 'white',
+                width: '100px',
+                fontSize: '16px'
+              }}
+            />
+            <span style={{ marginLeft: '10px', color: '#a1a1aa' }}>{setting.key.includes('opens') ? 'opens' : 'clicks'}</span>
+          </div>
+        ))}
+      </div>
+
+      {saving && (
+        <p style={{ marginTop: '15px', color: '#10b981' }}>Saving...</p>
       )}
     </div>
   )
