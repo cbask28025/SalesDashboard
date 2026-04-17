@@ -86,6 +86,7 @@ export default function Dashboard() {
   }
 
   const tabs = [
+    { id: 'upload', label: 'Upload', icon: Icons.Upload },
     { id: 'analytics', label: 'Analytics', icon: Icons.BarChart },
     { id: 'hot-leads', label: 'Hot Leads', icon: Icons.Flame, badge: hotLeads.length },
     { id: 'tasks', label: 'Task Board', icon: Icons.CheckSquare, badge: tasks.length },
@@ -145,6 +146,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <>
+                {activeTab === 'upload' && <UploadTab onRefresh={loadData} />}
                 {activeTab === 'analytics' && <AnalyticsTab stats={stats} leads={leads} />}
                 {activeTab === 'hot-leads' && <HotLeadsTab leads={hotLeads} />}
                 {activeTab === 'tasks' && <TasksTab tasks={tasks} onRefresh={loadData} />}
@@ -156,6 +158,198 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+    </div>
+  )
+}
+
+function UploadTab({ onRefresh }) {
+  const [dragActive, setDragActive] = useState(false)
+  const [file, setFile] = useState(null)
+  const [preview, setPreview] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [result, setResult] = useState(null)
+
+  function parseCSV(text) {
+    const lines = text.trim().split('\n')
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''))
+    const rows = []
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''))
+      const row = {}
+      headers.forEach((h, idx) => {
+        row[h] = values[idx] || ''
+      })
+      rows.push(row)
+    }
+    return rows
+  }
+
+  function classifyTier(title) {
+    const t = (title || '').toLowerCase()
+    if (t.includes('superintendent') || t.includes('director') || t.includes('principal')) return 1
+    if (t.includes('coordinator') || t.includes('specialist') || t.includes('coach') || t.includes('manager')) return 2
+    return 3
+  }
+
+  async function handleFile(f) {
+    if (!f.name.endsWith('.csv')) {
+      alert('Please upload a CSV file')
+      return
+    }
+    setFile(f)
+    const text = await f.text()
+    const rows = parseCSV(text)
+    setPreview({ total: rows.length, sample: rows.slice(0, 3), rows })
+  }
+
+  async function handleUpload() {
+    if (!preview) return
+    setUploading(true)
+    setResult(null)
+
+    let created = 0
+    let skipped = 0
+    let errors = []
+
+    for (const row of preview.rows) {
+      const email = row.email || row.email_address || row.e_mail
+      if (!email) {
+        skipped++
+        continue
+      }
+
+      const lead = {
+        email: email.toLowerCase(),
+        first_name: row.first_name || row.firstname || row.first || '',
+        last_name: row.last_name || row.lastname || row.last || '',
+        title: row.title || row.job_title || row.position || '',
+        phone: row.phone || row.phone_number || row.telephone || '',
+        district_name: row.district_name || row.district || row.organization || row.school_district || '',
+        district_state: row.district_state || row.state || '',
+        school_name: row.school_name || row.school || '',
+        tier: classifyTier(row.title || row.job_title || ''),
+        status: 'new',
+        source: file.name
+      }
+
+      const { error } = await supabase.from('leads').insert([lead])
+      
+      if (error) {
+        if (error.code === '23505') {
+          skipped++
+        } else {
+          errors.push(email + ': ' + error.message)
+        }
+      } else {
+        created++
+      }
+    }
+
+    setResult({ created, skipped, errors })
+    setUploading(false)
+    if (created > 0 && onRefresh) {
+      onRefresh()
+    }
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <h2>Upload Leads</h2>
+        <p>Import a CSV file with your lead list</p>
+      </div>
+
+      {result && (
+        <div className="card" style={{ background: result.created > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)', borderColor: result.created > 0 ? '#10b981' : '#f43f5e' }}>
+          <h3 style={{ marginBottom: '8px' }}>Import Complete</h3>
+          <p><strong>{result.created}</strong> leads created</p>
+          <p><strong>{result.skipped}</strong> skipped (duplicates or missing email)</p>
+          {result.errors.length > 0 && (
+            <div style={{ marginTop: '8px', color: '#f43f5e' }}>
+              <strong>Errors:</strong>
+              {result.errors.slice(0, 5).map((e, i) => <p key={i} style={{ fontSize: '13px' }}>{e}</p>)}
+            </div>
+          )}
+          <button className="btn btn-secondary" style={{ marginTop: '12px' }} onClick={() => { setResult(null); setFile(null); setPreview(null); }}>
+            Upload Another
+          </button>
+        </div>
+      )}
+
+      {!result && (
+        <>
+          <div
+            className="card"
+            style={{
+              border: dragActive ? '2px dashed #10b981' : '2px dashed #3f3f46',
+              background: dragActive ? 'rgba(16,185,129,0.1)' : 'transparent',
+              textAlign: 'center',
+              padding: '60px 20px',
+              cursor: 'pointer'
+            }}
+            onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+            onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={(e) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
+            onClick={() => document.getElementById('csv-upload').click()}
+          >
+            <input type="file" id="csv-upload" accept=".csv" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) handleFile(e.target.files[0]); }} />
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
+            <p style={{ fontSize: '18px', marginBottom: '8px' }}>Drag & drop your CSV file here</p>
+            <p style={{ color: '#71717a' }}>or click to browse</p>
+          </div>
+
+          {preview && (
+            <div className="card" style={{ marginTop: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <strong>{file.name}</strong>
+                  <span className="badge" style={{ marginLeft: '8px' }}>{preview.total} leads</span>
+                </div>
+                <button className="btn btn-ghost" onClick={() => { setFile(null); setPreview(null); }}>✕</button>
+              </div>
+
+              <p style={{ color: '#a1a1aa', marginBottom: '12px' }}>Preview (first 3 rows):</p>
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Name</th>
+                      <th>Title</th>
+                      <th>District</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.sample.map((row, i) => (
+                      <tr key={i}>
+                        <td>{row.email || row.email_address || '-'}</td>
+                        <td>{(row.first_name || row.firstname || '') + ' ' + (row.last_name || row.lastname || '')}</td>
+                        <td>{row.title || row.job_title || '-'}</td>
+                        <td>{row.district_name || row.district || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
+                <button className="btn btn-primary" onClick={handleUpload} disabled={uploading}>
+                  {uploading ? 'Importing...' : `Import ${preview.total} Leads`}
+                </button>
+                <button className="btn btn-secondary" onClick={() => { setFile(null); setPreview(null); }}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          <div className="card" style={{ marginTop: '20px', background: 'rgba(59,130,246,0.1)', borderColor: '#3b82f6' }}>
+            <h4 style={{ marginBottom: '8px' }}>Required CSV Columns</h4>
+            <p style={{ color: '#a1a1aa' }}><code style={{ color: '#10b981' }}>email</code>, <code style={{ color: '#10b981' }}>first_name</code>, <code style={{ color: '#10b981' }}>last_name</code>, <code style={{ color: '#10b981' }}>title</code>, <code style={{ color: '#10b981' }}>district_name</code></p>
+            <p style={{ color: '#71717a', marginTop: '8px' }}>Optional: phone, district_state, school_name</p>
+          </div>
+        </>
+      )}
     </div>
   )
 }
