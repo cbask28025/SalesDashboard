@@ -88,6 +88,7 @@ export default function Dashboard() {
   const tabs = [
     { id: 'upload', label: 'Upload', icon: Icons.Upload },
     { id: 'analytics', label: 'Analytics', icon: Icons.BarChart },
+    { id: 'all-leads', label: 'All Leads', icon: Icons.Users },
     { id: 'hot-leads', label: 'Hot Leads', icon: Icons.Flame, badge: hotLeads.length },
     { id: 'tasks', label: 'Task Board', icon: Icons.CheckSquare, badge: tasks.length },
     { id: 'replies', label: 'Recent Replies', icon: Icons.MessageSquare },
@@ -148,6 +149,7 @@ export default function Dashboard() {
               <>
                 {activeTab === 'upload' && <UploadTab onRefresh={loadData} />}
                 {activeTab === 'analytics' && <AnalyticsTab stats={stats} leads={leads} />}
+                {activeTab === 'all-leads' && <AllLeadsTab leads={leads} onRefresh={loadData} />}
                 {activeTab === 'hot-leads' && <HotLeadsTab leads={hotLeads} />}
                 {activeTab === 'tasks' && <TasksTab tasks={tasks} onRefresh={loadData} />}
                 {activeTab === 'replies' && <RepliesTab />}
@@ -162,6 +164,128 @@ export default function Dashboard() {
   )
 }
 
+function AllLeadsTab({ leads, onRefresh }) {
+  const [search, setSearch] = useState('')
+  const [tierFilter, setTierFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+
+  const filtered = leads.filter(lead => {
+    const matchesSearch = 
+      ((lead.first_name || '') + ' ' + (lead.last_name || '')).toLowerCase().includes(search.toLowerCase()) ||
+      (lead.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (lead.district_name || '').toLowerCase().includes(search.toLowerCase())
+    const matchesTier = tierFilter === 'all' || lead.tier === parseInt(tierFilter)
+    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
+    return matchesSearch && matchesTier && matchesStatus
+  })
+
+  return (
+    <div>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h2>All Leads</h2>
+          <p>{leads.length} total leads</p>
+        </div>
+        <div className="search-box">
+          <Icons.Search />
+          <input
+            type="text"
+            placeholder="Search leads..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="filters" style={{ marginBottom: '20px' }}>
+        <select 
+          value={tierFilter} 
+          onChange={(e) => setTierFilter(e.target.value)}
+          style={{ padding: '8px 12px', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px', color: 'white', marginRight: '8px' }}
+        >
+          <option value="all">All Tiers</option>
+          <option value="1">Tier 1</option>
+          <option value="2">Tier 2</option>
+          <option value="3">Tier 3</option>
+        </select>
+        <select 
+          value={statusFilter} 
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={{ padding: '8px 12px', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px', color: 'white' }}
+        >
+          <option value="all">All Statuses</option>
+          <option value="new">New</option>
+          <option value="sequencing">Sequencing</option>
+          <option value="engaged">Engaged</option>
+          <option value="hot">Hot</option>
+          <option value="warm">Warm</option>
+          <option value="demo_scheduled">Demo Scheduled</option>
+          <option value="closed_won">Closed Won</option>
+          <option value="closed_lost">Closed Lost</option>
+          <option value="not_interested">Not Interested</option>
+        </select>
+        <span style={{ marginLeft: '16px', color: '#71717a' }}>{filtered.length} leads shown</span>
+      </div>
+
+      <div className="card" style={{ padding: 0 }}>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Title</th>
+                <th>District</th>
+                <th>Tier</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="7">
+                    <div className="empty-state">
+                      <Icons.Users />
+                      <h3>No leads found</h3>
+                      <p>Try adjusting your filters or upload some leads</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((lead) => (
+                  <tr key={lead.id}>
+                    <td>
+                      <div className="lead-name">{(lead.first_name || '') + ' ' + (lead.last_name || '')}</div>
+                    </td>
+                    <td style={{ color: '#a1a1aa' }}>{lead.email}</td>
+                    <td>
+                      {lead.phone ? (
+                        <a href={'tel:' + lead.phone} className="phone-link">{lead.phone}</a>
+                      ) : <span style={{ color: '#71717a' }}>-</span>}
+                    </td>
+                    <td style={{ color: '#a1a1aa' }}>{lead.title || '-'}</td>
+                    <td>
+                      <div>{lead.district_name || '-'}</div>
+                      <div className="lead-title">{lead.district_state || ''}</div>
+                    </td>
+                    <td>
+                      <span className={'badge badge-tier' + lead.tier}>Tier {lead.tier}</span>
+                    </td>
+                    <td>
+                      <span className={'badge badge-' + (lead.status === 'hot' ? 'hot' : lead.status === 'warm' ? 'warm' : 'pending')}>{lead.status}</span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+                 
 function UploadTab({ onRefresh }) {
   const [dragActive, setDragActive] = useState(false)
   const [file, setFile] = useState(null)
