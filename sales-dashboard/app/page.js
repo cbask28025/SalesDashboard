@@ -171,6 +171,30 @@ function AllLeadsTab({ leads, onRefresh }) {
   const [search, setSearch] = useState('')
   const [tierFilter, setTierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [stageFilter, setStageFilter] = useState('all')
+
+  const getEmailStage = (lead) => {
+    if (lead.unsubscribed_at) return 'Unsubscribed'
+    if (lead.sequence_completed_at) return 'Completed'
+    switch(lead.sequence_step) {
+      case 0: return 'Not Started'
+      case 1: return 'Initial'
+      case 2: return 'Follow Up'
+      case 3: return 'Closing'
+      default: return 'Not Started'
+    }
+  }
+
+  const getStageColor = (stage) => {
+    switch(stage) {
+      case 'Unsubscribed': return '#ef4444'
+      case 'Completed': return '#8b5cf6'
+      case 'Initial': return '#3b82f6'
+      case 'Follow Up': return '#f59e0b'
+      case 'Closing': return '#10b981'
+      default: return '#71717a'
+    }
+  }
 
   const filtered = leads.filter(lead => {
     const matchesSearch = 
@@ -179,7 +203,8 @@ function AllLeadsTab({ leads, onRefresh }) {
       (lead.district_name || '').toLowerCase().includes(search.toLowerCase())
     const matchesTier = tierFilter === 'all' || lead.tier === parseInt(tierFilter)
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
-    return matchesSearch && matchesTier && matchesStatus
+    const matchesStage = stageFilter === 'all' || getEmailStage(lead) === stageFilter
+    return matchesSearch && matchesTier && matchesStatus && matchesStage
   })
 
   return (
@@ -200,11 +225,11 @@ function AllLeadsTab({ leads, onRefresh }) {
         </div>
       </div>
 
-      <div className="filters" style={{ marginBottom: '20px' }}>
+      <div className="filters" style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <select 
           value={tierFilter} 
           onChange={(e) => setTierFilter(e.target.value)}
-          style={{ padding: '8px 12px', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px', color: 'white', marginRight: '8px' }}
+          style={{ padding: '8px 12px', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px', color: 'white' }}
         >
           <option value="all">All Tiers</option>
           <option value="1">Tier 1</option>
@@ -227,7 +252,20 @@ function AllLeadsTab({ leads, onRefresh }) {
           <option value="closed_lost">Closed Lost</option>
           <option value="not_interested">Not Interested</option>
         </select>
-        <span style={{ marginLeft: '16px', color: '#71717a' }}>{filtered.length} leads shown</span>
+        <select 
+          value={stageFilter} 
+          onChange={(e) => setStageFilter(e.target.value)}
+          style={{ padding: '8px 12px', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px', color: 'white' }}
+        >
+          <option value="all">All Email Stages</option>
+          <option value="Not Started">Not Started</option>
+          <option value="Initial">Initial</option>
+          <option value="Follow Up">Follow Up</option>
+          <option value="Closing">Closing</option>
+          <option value="Completed">Completed</option>
+          <option value="Unsubscribed">Unsubscribed</option>
+        </select>
+        <span style={{ marginLeft: '8px', color: '#71717a', alignSelf: 'center' }}>{filtered.length} leads shown</span>
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -238,10 +276,10 @@ function AllLeadsTab({ leads, onRefresh }) {
                 <th>Name</th>
                 <th>Email</th>
                 <th>Phone</th>
-                <th>Title</th>
                 <th>District</th>
                 <th>Tier</th>
                 <th>Status</th>
+                <th>Email Stage</th>
               </tr>
             </thead>
             <tbody>
@@ -256,30 +294,47 @@ function AllLeadsTab({ leads, onRefresh }) {
                   </td>
                 </tr>
               ) : (
-                filtered.map((lead) => (
-                  <tr key={lead.id}>
-                    <td>
-                      <div className="lead-name">{(lead.first_name || '') + ' ' + (lead.last_name || '')}</div>
-                    </td>
-                    <td style={{ color: '#a1a1aa' }}>{lead.email}</td>
-                    <td>
-                      {lead.phone ? (
-                        <a href={'tel:' + lead.phone} className="phone-link">{lead.phone}</a>
-                      ) : <span style={{ color: '#71717a' }}>-</span>}
-                    </td>
-                    <td style={{ color: '#a1a1aa' }}>{lead.title || '-'}</td>
-                    <td>
-                      <div>{lead.district_name || '-'}</div>
-                      <div className="lead-title">{lead.district_state || ''}</div>
-                    </td>
-                    <td>
-                      <span className={'badge badge-tier' + lead.tier}>Tier {lead.tier}</span>
-                    </td>
-                    <td>
-                      <span className={'badge badge-' + (lead.status === 'hot' ? 'hot' : lead.status === 'warm' ? 'warm' : 'pending')}>{lead.status}</span>
-                    </td>
-                  </tr>
-                ))
+                filtered.map((lead) => {
+                  const stage = getEmailStage(lead)
+                  return (
+                    <tr key={lead.id}>
+                      <td>
+                        <div className="lead-name">{(lead.first_name || '') + ' ' + (lead.last_name || '')}</div>
+                      </td>
+                      <td style={{ color: lead.unsubscribed_at ? '#ef4444' : '#a1a1aa' }}>
+                        {lead.email}
+                        {lead.unsubscribed_at && <span style={{ marginLeft: '6px', fontSize: '12px' }}>⛔</span>}
+                      </td>
+                      <td>
+                        {lead.phone ? (
+                          <a href={'tel:' + lead.phone} className="phone-link">{lead.phone}</a>
+                        ) : <span style={{ color: '#71717a' }}>-</span>}
+                      </td>
+                      <td>
+                        <div>{lead.district_name || '-'}</div>
+                        <div className="lead-title">{lead.district_state || ''}</div>
+                      </td>
+                      <td>
+                        <span className={'badge badge-tier' + lead.tier}>Tier {lead.tier}</span>
+                      </td>
+                      <td>
+                        <span className={'badge badge-' + (lead.status === 'hot' ? 'hot' : lead.status === 'warm' ? 'warm' : 'pending')}>{lead.status}</span>
+                      </td>
+                      <td>
+                        <span style={{ 
+                          padding: '4px 10px', 
+                          borderRadius: '12px', 
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          background: getStageColor(stage) + '20',
+                          color: getStageColor(stage)
+                        }}>
+                          {stage}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -486,7 +541,6 @@ function AnalyticsTab({ stats, leads }) {
     acc[lead.status] = (acc[lead.status] || 0) + 1
     return acc
   }, {})
-
   const pipeline = [
     { status: 'hot', label: 'Hot', color: '#f43f5e' },
     { status: 'demo_scheduled', label: 'Demo Scheduled', color: '#8b5cf6' },
@@ -495,8 +549,17 @@ function AnalyticsTab({ stats, leads }) {
     { status: 'sequencing', label: 'Sequencing', color: '#3b82f6' },
     { status: 'new', label: 'New', color: '#71717a' },
   ]
-
   const maxCount = Math.max(...pipeline.map(p => pipelineData[p.status] || 0), 1)
+
+  // Email Sequence Funnel Stats
+  const funnel = {
+    unsubscribed: leads.filter(l => l.unsubscribed_at).length,
+    notStarted: leads.filter(l => !l.unsubscribed_at && (!l.sequence_step || l.sequence_step === 0)).length,
+    initial: leads.filter(l => !l.unsubscribed_at && l.sequence_step === 1).length,
+    followUp: leads.filter(l => !l.unsubscribed_at && l.sequence_step === 2).length,
+    closing: leads.filter(l => !l.unsubscribed_at && l.sequence_step === 3 && !l.sequence_completed_at).length,
+    completed: leads.filter(l => !l.unsubscribed_at && l.sequence_completed_at).length
+  }
 
   return (
     <div>
@@ -504,7 +567,6 @@ function AnalyticsTab({ stats, leads }) {
         <h2>Analytics</h2>
         <p>Email performance and pipeline health</p>
       </div>
-
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-header">
@@ -513,7 +575,6 @@ function AnalyticsTab({ stats, leads }) {
           <div className="stat-value">{stats?.emailsSent || 0}</div>
           <div className="stat-label">Emails Sent</div>
         </div>
-
         <div className="stat-card">
           <div className="stat-header">
             <span className="stat-icon"><Icons.Target /></span>
@@ -521,7 +582,6 @@ function AnalyticsTab({ stats, leads }) {
           <div className="stat-value">{stats?.openRate || 0}%</div>
           <div className="stat-label">Open Rate</div>
         </div>
-
         <div className="stat-card">
           <div className="stat-header">
             <span className="stat-icon"><Icons.Users /></span>
@@ -529,7 +589,6 @@ function AnalyticsTab({ stats, leads }) {
           <div className="stat-value">{stats?.totalLeads || 0}</div>
           <div className="stat-label">Total Leads</div>
         </div>
-
         <div className="stat-card">
           <div className="stat-header">
             <span className="stat-icon"><Icons.Flame /></span>
@@ -538,7 +597,6 @@ function AnalyticsTab({ stats, leads }) {
           <div className="stat-label">Hot Leads</div>
         </div>
       </div>
-
       <div className="grid-2">
         <div className="card">
           <div className="card-header">
@@ -561,7 +619,6 @@ function AnalyticsTab({ stats, leads }) {
             </div>
           ))}
         </div>
-
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Quick Stats</h3>
@@ -582,10 +639,41 @@ function AnalyticsTab({ stats, leads }) {
           </div>
         </div>
       </div>
+
+      <div className="card" style={{ marginTop: '20px' }}>
+        <div className="card-header">
+          <h3 className="card-title">Email Sequence Funnel</h3>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginTop: '16px' }}>
+          <div style={{ textAlign: 'center', padding: '20px', background: '#18181b', borderRadius: '8px' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#71717a' }}>{funnel.notStarted}</div>
+            <div style={{ fontSize: '12px', color: '#71717a', marginTop: '4px' }}>Not Started</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '20px', background: '#18181b', borderRadius: '8px' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3b82f6' }}>{funnel.initial}</div>
+            <div style={{ fontSize: '12px', color: '#3b82f6', marginTop: '4px' }}>Initial</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '20px', background: '#18181b', borderRadius: '8px' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#f59e0b' }}>{funnel.followUp}</div>
+            <div style={{ fontSize: '12px', color: '#f59e0b', marginTop: '4px' }}>Follow Up</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '20px', background: '#18181b', borderRadius: '8px' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#10b981' }}>{funnel.closing}</div>
+            <div style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Closing</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '20px', background: '#18181b', borderRadius: '8px' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#8b5cf6' }}>{funnel.completed}</div>
+            <div style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '4px' }}>Completed</div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '20px', background: '#18181b', borderRadius: '8px' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#ef4444' }}>{funnel.unsubscribed}</div>
+            <div style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>Unsubscribed</div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
-
 function HotLeadsTab({ leads }) {
   const [search, setSearch] = useState('')
 
