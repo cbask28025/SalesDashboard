@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Sales Dashboard | K-12 Health Curriculum',
-  description: 'Sales automation dashboard',
+  title: 'Choosing the Best — Sales Dashboard',
+  description: 'K-12 Health Curriculum sales automation',
 }
 
 export default function RootLayout({ children }) {
