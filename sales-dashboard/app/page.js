@@ -1017,7 +1017,10 @@ function ImportsTab() {
 function SettingsTab() {
   const [settings, setSettings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [savedFlash, setSavedFlash] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [originalSettings, setOriginalSettings] = useState([])
 
   useEffect(() => { loadSettings() }, [])
 
@@ -1025,30 +1028,92 @@ function SettingsTab() {
     if (!supabase) return
     const { data } = await supabase.from('settings').select('*').order('key')
     setSettings(data || [])
+    setOriginalSettings(JSON.parse(JSON.stringify(data || [])))
     setLoading(false)
   }
 
   function handleChange(id, newValue) {
-    setSettings(settings.map(s => s.id === id ? { ...s, value: newValue } : s))
+    const updated = settings.map(s => s.id === id ? { ...s, value: newValue } : s)
+    setSettings(updated)
+    // Compare against originals to know if there are unsaved changes
+    const hasChanges = updated.some(s => {
+      const orig = originalSettings.find(o => o.id === s.id)
+      return orig && String(orig.value) !== String(s.value)
+    })
+    setDirty(hasChanges)
   }
 
-  async function saveSetting(id, newValue) {
-    setSaving(id)
-    await supabase
-      .from('settings')
-      .update({ value: newValue, updated_at: new Date().toISOString() })
-      .eq('id', id)
-    setSaving(null)
+  async function saveAll() {
+    setSaving(true)
+    const changedSettings = settings.filter(s => {
+      const orig = originalSettings.find(o => o.id === s.id)
+      return orig && String(orig.value) !== String(s.value)
+    })
+
+    for (const s of changedSettings) {
+      await supabase
+        .from('settings')
+        .update({ value: s.value, updated_at: new Date().toISOString() })
+        .eq('id', s.id)
+    }
+
+    // Reset baseline so dirty flag clears
+    setOriginalSettings(JSON.parse(JSON.stringify(settings)))
+    setDirty(false)
+    setSaving(false)
+    setSavedFlash(true)
+    setTimeout(() => setSavedFlash(false), 2500)
+  }
+
+  function discardChanges() {
+    setSettings(JSON.parse(JSON.stringify(originalSettings)))
+    setDirty(false)
   }
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
   return (
     <div>
-      <div className="page-header">
-        <h2>Settings</h2>
-        <p>Configure email sequence timing and thresholds</p>
+      <div className="page-header flex-between">
+        <div>
+          <h2>Settings</h2>
+          <p>Configure email sequence timing and thresholds</p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {savedFlash && (
+            <span style={{
+              color: 'var(--status-success)',
+              fontWeight: 600,
+              fontSize: '13px',
+              padding: '6px 12px',
+              background: 'var(--status-success-bg)',
+              borderRadius: '6px'
+            }}>
+              ✓ Saved
+            </span>
+          )}
+          {dirty && !saving && (
+            <button className="btn btn-secondary" onClick={discardChanges}>
+              Discard
+            </button>
+          )}
+          <button
+            className="btn btn-primary"
+            onClick={saveAll}
+            disabled={!dirty || saving}
+          >
+            {saving ? 'Saving...' : dirty ? 'Save Changes' : 'Saved'}
+          </button>
+        </div>
       </div>
+
+      {dirty && (
+        <div className="alert alert-info mb-16">
+          <p style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+            You have unsaved changes. Click <strong>Save Changes</strong> to apply them.
+          </p>
+        </div>
+      )}
 
       <div className="card">
         <div className="card-header">
@@ -1066,10 +1131,8 @@ function SettingsTab() {
               max="30"
               value={setting.value}
               onChange={(e) => handleChange(setting.id, e.target.value)}
-              onBlur={(e) => saveSetting(setting.id, e.target.value)}
             />
             <span className="unit">days</span>
-            {saving === setting.id && <span className="saving">Saving...</span>}
           </div>
         ))}
       </div>
@@ -1090,13 +1153,40 @@ function SettingsTab() {
               max="20"
               value={setting.value}
               onChange={(e) => handleChange(setting.id, e.target.value)}
-              onBlur={(e) => saveSetting(setting.id, e.target.value)}
             />
             <span className="unit">{setting.key.includes('opens') ? 'opens' : 'clicks'}</span>
-            {saving === setting.id && <span className="saving">Saving...</span>}
           </div>
         ))}
       </div>
+
+      {/* Sticky footer save bar — visible only when there are unsaved changes */}
+      {dirty && (
+        <div style={{
+          position: 'sticky',
+          bottom: '20px',
+          marginTop: '24px',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--ctb-blue)',
+          borderRadius: '8px',
+          padding: '14px 18px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: 'var(--shadow-lg)'
+        }}>
+          <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+            Unsaved changes
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn btn-secondary" onClick={discardChanges}>
+              Discard
+            </button>
+            <button className="btn btn-primary" onClick={saveAll} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
