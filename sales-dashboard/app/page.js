@@ -1043,6 +1043,32 @@ function SettingsTab() {
     setDirty(hasChanges)
   }
 
+  // Keys that should be stored as JSON numbers, not strings.
+  // (These all map to numeric inputs; the JSONB column will hold them as numbers.)
+  const NUMERIC_KEYS = [
+    'days_between_email_1_and_2',
+    'days_between_email_2_and_3',
+    'hot_threshold_opens',
+    'hot_threshold_clicks',
+    'min_days_between_calls',
+    'max_call_attempts',
+    'daily_send_limit',
+    'warmup_daily_limit',
+    'business_hours_start',
+    'business_hours_end',
+  ]
+
+  // Coerce a setting value to the right type before saving to Supabase.
+  // Numeric keys → real numbers (so JSONB stores `4` not `"4"`).
+  // Everything else → leave alone.
+  function coerceValue(key, value) {
+    if (NUMERIC_KEYS.includes(key)) {
+      const n = Number(value)
+      return Number.isFinite(n) ? n : value
+    }
+    return value
+  }
+
   async function saveAll() {
     setSaving(true)
     const changedSettings = settings.filter(s => {
@@ -1053,7 +1079,10 @@ function SettingsTab() {
     for (const s of changedSettings) {
       await supabase
         .from('settings')
-        .update({ value: s.value, updated_at: new Date().toISOString() })
+        .update({
+          value: coerceValue(s.key, s.value),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', s.id)
     }
 
