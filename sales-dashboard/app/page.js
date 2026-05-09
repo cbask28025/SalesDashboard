@@ -518,6 +518,15 @@ function UploadTab({ onRefresh }) {
         created++
       }
     }
+    // Log the import
+    await supabase.from('import_logs').insert([{
+      filename: file.name,
+      total_rows: preview.rows.length,
+      leads_created: created,
+      tier_1_count: preview.rows.filter(r => classifyTier(r.title || r.job_title || '') === 1).length,
+      tier_2_count: preview.rows.filter(r => classifyTier(r.title || r.job_title || '') === 2).length,
+      tier_3_count: preview.rows.filter(r => classifyTier(r.title || r.job_title || '') === 3).length,
+    }])
     setResult({ created, skipped, errors })
     setUploading(false)
     if (created > 0 && onRefresh) onRefresh()
