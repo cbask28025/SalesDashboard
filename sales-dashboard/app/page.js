@@ -42,11 +42,13 @@ export default function Dashboard() {
         .order('created_at', { ascending: false })
       setLeads(leadsData || [])
 
-      const { data: hotData } = await supabase
-        .from('hot_leads')
-        .select('*')
-        .limit(20)
-      setHotLeads(hotData || [])
+      // Hot leads: opened AND clicked at least once (simple & high signal)
+      const hotData = (leadsData || []).filter(l =>
+        !l.unsubscribed_at &&
+        (l.total_opens || 0) >= 1 &&
+        (l.total_clicks || 0) >= 1
+      ).slice(0, 20)
+      setHotLeads(hotData)
 
       const { data: tasksData } = await supabase
         .from('pending_tasks')
@@ -285,6 +287,11 @@ function AllLeadsTab({ leads, onRefresh }) {
                       <td>
                         <div className="lead-name">
                           {(lead.first_name || '') + ' ' + (lead.last_name || '')}
+                          {lead.unsubscribed_at && (
+                            <span className="badge badge-hot" style={{ marginLeft: '8px', fontSize: '10px' }}>
+                              Unsubscribed
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td style={{ color: lead.unsubscribed_at ? 'var(--status-hot)' : 'var(--text-secondary)' }}>
@@ -638,17 +645,20 @@ function AnalyticsTab({ stats, leads }) {
 function HotLeadsTab({ leads }) {
   const [search, setSearch] = useState('')
 
-  const filtered = leads.filter(lead =>
-    (lead.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (lead.district_name || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = leads.filter(lead => {
+    const fullName = lead.full_name || ((lead.first_name || '') + ' ' + (lead.last_name || '')).trim()
+    return (
+      fullName.toLowerCase().includes(search.toLowerCase()) ||
+      (lead.district_name || '').toLowerCase().includes(search.toLowerCase())
+    )
+  })
 
   return (
     <div>
       <div className="page-header flex-between">
         <div>
           <h2>Hot Leads</h2>
-          <p>Leads who opened 2+ times or clicked</p>
+          <p>Leads who have both opened and clicked at least once</p>
         </div>
         <div className="search-box">
           <Icons.Search />
@@ -689,7 +699,7 @@ function HotLeadsTab({ leads }) {
                 filtered.map((lead) => (
                   <tr key={lead.id}>
                     <td>
-                      <div className="lead-name">{lead.full_name}</div>
+                      <div className="lead-name">{lead.full_name || ((lead.first_name || '') + ' ' + (lead.last_name || '')).trim()}</div>
                       <div className="lead-title">{lead.title}</div>
                     </td>
                     <td>
@@ -1148,7 +1158,7 @@ function SettingsTab() {
         <div className="card-header">
           <h3 className="card-title">Email Sequence Timing</h3>
         </div>
-        {settings.filter(s => s.key.includes('days_between')).map(setting => (
+        {settings.filter(s => s.key === 'days_between_email_1_and_2' || s.key === 'days_between_email_2_and_3').map(setting => (
           <div key={setting.id} className="setting-row">
             <label>
               {setting.key === 'days_between_email_1_and_2' ? 'Days between Email 1 and Email 2' : 'Days between Email 2 and Email 3'}
@@ -1170,7 +1180,7 @@ function SettingsTab() {
         <div className="card-header">
           <h3 className="card-title">Hot Lead Thresholds</h3>
         </div>
-        {settings.filter(s => s.key.includes('hot_threshold')).map(setting => (
+        {settings.filter(s => s.key === 'hot_threshold_opens' || s.key === 'hot_threshold_clicks').map(setting => (
           <div key={setting.id} className="setting-row">
             <label>
               {setting.key === 'hot_threshold_opens' ? 'Opens to become Hot' : 'Clicks to become Hot'}
