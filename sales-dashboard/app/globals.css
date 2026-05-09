@@ -481,7 +481,11 @@ tbody tr:last-child td {
   color: var(--ctb-blue);
   font-weight: 500;
 }
-
+th:last-child,
+td:last-child {
+  min-width: 100px;
+  white-space: nowrap;
+}
 /* ============================================================
    BADGES
    ============================================================ */
