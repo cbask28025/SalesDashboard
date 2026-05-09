@@ -204,7 +204,6 @@ function AllLeadsTab({ leads, onRefresh }) {
           total_clicks: 0,
           last_open_at: null,
           last_click_at: null,
-          reply_classification: null,
           lead_score: null
         })
         .eq('id', lead.id)
