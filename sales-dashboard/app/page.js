@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 // Webhook URL for the "Reset Pipeline" button on each lead.
 // Points to the n8n workflow that re-sends Email 1 immediately.
 // (Duplicate of your daily-send workflow, but with a webhook trigger instead of schedule.)
-const RESET_WEBHOOK_URL = 'https://cbask28025.app.n8n.cloud/webhook/REPLACE-WITH-YOUR-WEBHOOK-ID'
+const RESET_WEBHOOK_URL = 'https://cbask28025.app.n8n.cloud/webhook/4c166d91-c01b-4cea-954c-4800f838829f'
 
 // Icons as simple SVG components
 const Icons = {
