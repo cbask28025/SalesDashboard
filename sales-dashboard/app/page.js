@@ -216,14 +216,6 @@ const getEmailStage = (lead) => {
     }
   }
 
-  const stageStyles = {
-    'Unsubscribed':  { bg: 'var(--status-hot-bg)',     color: 'var(--status-hot)' },
-    'Completed':     { bg: 'var(--status-purple-bg)',  color: 'var(--status-purple)' },
-    'Initial':       { bg: 'var(--status-cool-bg)',    color: 'var(--status-cool)' },
-    'Follow Up':     { bg: 'var(--status-warm-bg)',    color: 'var(--status-warm)' },
-    'Closing':       { bg: 'var(--status-success-bg)', color: 'var(--status-success)' },
-    'Not Started':   { bg: 'var(--status-neutral-bg)', color: 'var(--status-neutral)' },
-  }
   // Each stage maps to a CSS variable so colors stay consistent with the theme
   const stageStyles = {
     'Unsubscribed':  { bg: 'var(--status-hot-bg)',     color: 'var(--status-hot)' },
