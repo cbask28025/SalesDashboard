@@ -185,36 +185,6 @@ function AllLeadsTab({ leads, onRefresh }) {
   async function resetPipeline(lead) {
     setResetting(true)
     try {
-     // 1. Delete all email events for this lead (opens, clicks)
-      await supabase.from('email_events').delete().eq('lead_id', lead.id)
-
-      // 2. Delete all email send records for this lead
-      await supabase.from('email_sends').delete().eq('lead_id', lead.id)
-
-      // 3. Reset ALL lead fields to fresh state
-      const { error: dbError } = await supabase
-        .from('leads')
-        .update({
-          status: 'new',
-          sequence_step: 0,
-          sequence_completed_at: null,
-          unsubscribed: false,
-          unsubscribed_at: null,
-          total_opens: 0,
-          total_clicks: 0,
-          last_open_at: null,
-          last_click_at: null,
-          lead_score: null
-        })
-        .eq('id', lead.id)
-
-      if (dbError) throw new Error('Database reset failed: ' + dbError.message)
-
-      // 4. Fire webhook to send Email 1 immediately
-
-      // 4. Fire webhook to send Email 1 immediately
-
-      // 2. Fire webhook to send Email 1 immediately
       const res = await fetch(RESET_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -233,18 +203,6 @@ function AllLeadsTab({ leads, onRefresh }) {
     }
     setResetting(false)
     setResetTarget(null)
-  }
-
-  const getEmailStage = (lead) => {
-    if (lead.unsubscribed_at) return 'Unsubscribed'
-    if (lead.sequence_completed_at) return 'Completed'
-    switch(lead.sequence_step) {
-      case 0: return 'Not Started'
-      case 1: return 'Initial'
-      case 2: return 'Follow Up'
-      case 3: return 'Closing'
-      default: return 'Not Started'
-    }
   }
 
   // Each stage maps to a CSS variable so colors stay consistent with the theme
