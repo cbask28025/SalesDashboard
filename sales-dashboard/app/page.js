@@ -2,6 +2,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+// ============================================================
+// CONFIG
+// ============================================================
+// Webhook URL for the "Reset Pipeline" button on each lead.
+// Points to the n8n workflow that re-sends Email 1 immediately.
+// (Duplicate of your daily-send workflow, but with a webhook trigger instead of schedule.)
+const RESET_WEBHOOK_URL = 'https://cbask28025.app.n8n.cloud/webhook/REPLACE-WITH-YOUR-WEBHOOK-ID'
+
 // Icons as simple SVG components
 const Icons = {
   Target: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
@@ -19,6 +27,7 @@ const Icons = {
   Search: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   ExternalLink: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
   Settings: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  RotateCcw: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>,
 }
 
 export default function Dashboard() {
@@ -168,6 +177,48 @@ function AllLeadsTab({ leads, onRefresh }) {
   const [tierFilter, setTierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [stageFilter, setStageFilter] = useState('all')
+  const [resetTarget, setResetTarget] = useState(null)  // lead being reset (for modal)
+  const [resetting, setResetting] = useState(false)
+  const [resetFlash, setResetFlash] = useState(null)    // {leadId, status: 'success'|'error', message}
+
+  // Reset a lead's pipeline: clear sequence state, fire webhook to send Email 1.
+  async function resetPipeline(lead) {
+    setResetting(true)
+    try {
+      // 1. Reset Supabase fields
+      const { error: dbError } = await supabase
+        .from('leads')
+        .update({
+          status: 'new',
+          sequence_step: 0,
+          sequence_completed_at: null,
+          unsubscribed: false,
+          unsubscribed_at: null
+        })
+        .eq('id', lead.id)
+
+      if (dbError) throw new Error('Database reset failed: ' + dbError.message)
+
+      // 2. Fire webhook to send Email 1 immediately
+      const res = await fetch(RESET_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: lead.id })
+      })
+
+      if (!res.ok) throw new Error('Webhook failed: ' + res.status + ' ' + res.statusText)
+
+      setResetFlash({ leadId: lead.id, status: 'success', message: 'Reset & email sent' })
+      setTimeout(() => setResetFlash(null), 3000)
+      if (onRefresh) onRefresh()
+    } catch (err) {
+      console.error('Reset pipeline error:', err)
+      setResetFlash({ leadId: lead.id, status: 'error', message: err.message })
+      setTimeout(() => setResetFlash(null), 5000)
+    }
+    setResetting(false)
+    setResetTarget(null)
+  }
 
   const getEmailStage = (lead) => {
     if (lead.unsubscribed_at) return 'Unsubscribed'
@@ -265,12 +316,13 @@ function AllLeadsTab({ leads, onRefresh }) {
                 <th>Tier</th>
                 <th>Status</th>
                 <th>Email Stage</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="8">
                     <div className="empty-state">
                       <Icons.Users />
                       <h3>No leads found</h3>
@@ -320,6 +372,26 @@ function AllLeadsTab({ leads, onRefresh }) {
                           {stage}
                         </span>
                       </td>
+                      <td>
+                        {resetFlash && resetFlash.leadId === lead.id ? (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: resetFlash.status === 'success' ? 'var(--status-success)' : 'var(--status-hot)'
+                          }}>
+                            {resetFlash.status === 'success' ? '✓ ' : '✕ '}{resetFlash.message}
+                          </span>
+                        ) : (
+                          <button
+                            className="btn btn-secondary"
+                            style={{ padding: '5px 10px', fontSize: '12px' }}
+                            onClick={() => setResetTarget(lead)}
+                            title="Reset this lead's pipeline and re-send Email 1"
+                          >
+                            <Icons.RotateCcw /> Reset
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   )
                 })
@@ -328,6 +400,69 @@ function AllLeadsTab({ leads, onRefresh }) {
           </table>
         </div>
       </div>
+
+      {/* Reset Pipeline Confirmation Modal */}
+      {resetTarget && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(31, 42, 68, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => !resetting && setResetTarget(null)}
+        >
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-default)',
+              borderRadius: '8px',
+              padding: '28px',
+              maxWidth: '460px',
+              width: '90%',
+              boxShadow: 'var(--shadow-lg)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '20px',
+              fontWeight: 400,
+              color: 'var(--text-primary)',
+              marginBottom: '12px'
+            }}>
+              Reset pipeline for this lead?
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              <strong>{((resetTarget.first_name || '') + ' ' + (resetTarget.last_name || '')).trim()}</strong>
+              {resetTarget.district_name && <span style={{ color: 'var(--text-muted)' }}> · {resetTarget.district_name}</span>}
+            </p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '20px' }}>
+              This will reset their status to <code>new</code>, clear their email sequence progress,
+              re-enable email sending, and immediately send Email 1.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setResetTarget(null)}
+                disabled={resetting}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => resetPipeline(resetTarget)}
+                disabled={resetting}
+              >
+                {resetting ? 'Resetting...' : 'Reset & Send Email 1'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
