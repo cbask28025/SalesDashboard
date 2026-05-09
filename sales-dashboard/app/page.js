@@ -204,7 +204,26 @@ function AllLeadsTab({ leads, onRefresh }) {
     setResetting(false)
     setResetTarget(null)
   }
+const getEmailStage = (lead) => {
+    if (lead.unsubscribed_at) return 'Unsubscribed'
+    if (lead.sequence_completed_at) return 'Completed'
+    switch(lead.sequence_step) {
+      case 0: return 'Not Started'
+      case 1: return 'Initial'
+      case 2: return 'Follow Up'
+      case 3: return 'Closing'
+      default: return 'Not Started'
+    }
+  }
 
+  const stageStyles = {
+    'Unsubscribed':  { bg: 'var(--status-hot-bg)',     color: 'var(--status-hot)' },
+    'Completed':     { bg: 'var(--status-purple-bg)',  color: 'var(--status-purple)' },
+    'Initial':       { bg: 'var(--status-cool-bg)',    color: 'var(--status-cool)' },
+    'Follow Up':     { bg: 'var(--status-warm-bg)',    color: 'var(--status-warm)' },
+    'Closing':       { bg: 'var(--status-success-bg)', color: 'var(--status-success)' },
+    'Not Started':   { bg: 'var(--status-neutral-bg)', color: 'var(--status-neutral)' },
+  }
   // Each stage maps to a CSS variable so colors stay consistent with the theme
   const stageStyles = {
     'Unsubscribed':  { bg: 'var(--status-hot-bg)',     color: 'var(--status-hot)' },
