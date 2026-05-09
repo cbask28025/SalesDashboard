@@ -186,6 +186,13 @@ function AllLeadsTab({ leads, onRefresh }) {
     setResetting(true)
     try {
       // 1. Reset Supabase fields
+      // 1. Delete all email events for this lead (opens, clicks)
+      await supabase.from('email_events').delete().eq('lead_id', lead.id)
+
+      // 2. Delete all email send records for this lead
+      await supabase.from('email_sends').delete().eq('lead_id', lead.id)
+
+      // 3. Reset ALL lead fields to fresh state
       const { error: dbError } = await supabase
         .from('leads')
         .update({
@@ -193,11 +200,20 @@ function AllLeadsTab({ leads, onRefresh }) {
           sequence_step: 0,
           sequence_completed_at: null,
           unsubscribed: false,
-          unsubscribed_at: null
+          unsubscribed_at: null,
+          total_opens: 0,
+          total_clicks: 0,
+          last_open_at: null,
+          last_click_at: null,
+          last_contacted: null,
+          reply_classification: null,
+          lead_score: null
         })
         .eq('id', lead.id)
 
       if (dbError) throw new Error('Database reset failed: ' + dbError.message)
+
+      // 4. Fire webhook to send Email 1 immediately
 
       // 2. Fire webhook to send Email 1 immediately
       const res = await fetch(RESET_WEBHOOK_URL, {
