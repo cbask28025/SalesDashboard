@@ -1373,3 +1373,429 @@ select:focus {
   font-size: 13px;
   line-height: 1.6;
 }
+
+/* ============================================================
+   v2 — UPLOAD
+   ============================================================ */
+
+.upload-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.upload-zone {
+  background: var(--bg-card);
+  border: 2px dashed var(--border-strong);
+  border-radius: 12px;
+  padding: 56px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--text-muted);
+}
+
+.upload-zone:hover,
+.upload-zone.is-active {
+  border-color: var(--ctb-blue);
+  background: var(--ctb-blue-pale);
+}
+
+.upload-zone svg {
+  color: var(--ctb-blue);
+  margin-bottom: 12px;
+}
+
+.upload-zone-title {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.upload-zone-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.upload-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--status-hot-bg);
+  color: var(--status-hot);
+  border: 1px solid var(--status-hot);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.upload-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.upload-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+}
+
+.upload-row-count {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.upload-icon-btn {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.upload-icon-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.upload-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 20px 22px;
+}
+
+.upload-section h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.upload-section-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.upload-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.upload-mapping-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.upload-mapping-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.upload-mapping-label em {
+  font-style: normal;
+  color: var(--status-hot);
+  font-size: 11px;
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.upload-mapping-field select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.upload-mapping-field select:focus {
+  outline: none;
+  border-color: var(--ctb-blue);
+}
+
+.upload-mapping-confidence {
+  font-size: 11px;
+  color: var(--ctb-blue);
+}
+
+.upload-preview-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.upload-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.upload-preview-table th {
+  background: var(--bg-tertiary);
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.upload-preview-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.upload-preview-table tr:last-child td {
+  border-bottom: none;
+}
+
+.upload-cell-empty {
+  color: var(--text-muted);
+}
+
+.upload-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.upload-btn-primary {
+  background: var(--ctb-blue);
+  color: var(--text-on-blue);
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.upload-btn-primary:hover:not(:disabled) {
+  background: var(--ctb-blue-dark);
+}
+
+.upload-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.upload-btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.upload-btn-secondary:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+}
+
+.upload-result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 36px 24px;
+  text-align: center;
+}
+
+.upload-result-icon {
+  color: var(--status-success);
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.upload-result-card h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+  font-weight: 400;
+  margin-bottom: 16px;
+}
+
+.upload-result-stats {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  margin-bottom: 24px;
+}
+
+.upload-result-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.upload-result-stats strong {
+  font-size: 28px;
+  color: var(--ctb-blue);
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+.upload-result-stats span {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Import history (collapsible) */
+.import-history {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+}
+
+.import-history-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.import-history-toggle:hover {
+  background: var(--bg-tertiary);
+}
+
+.import-history-body {
+  border-top: 1px solid var(--border-subtle);
+  padding: 4px 0;
+}
+
+.import-history-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.import-history-feedback {
+  margin: 8px 18px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.import-history-feedback.is-ok {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+  border: 1px solid var(--status-success);
+}
+
+.import-history-feedback.is-err {
+  background: var(--status-hot-bg);
+  color: var(--status-hot);
+  border: 1px solid var(--status-hot);
+}
+
+.import-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.import-history-table th {
+  text-align: left;
+  padding: 10px 18px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+}
+
+.import-history-table td {
+  padding: 10px 18px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.import-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.import-status-badge.is-success {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.import-status-badge.is-partial {
+  background: var(--status-warm-bg);
+  color: var(--status-warm);
+}
+
+.import-status-badge.is-failed {
+  background: var(--status-hot-bg);
+  color: var(--status-hot);
+}
+
+.import-status-badge.is-processing {
+  background: var(--status-cool-bg);
+  color: var(--status-cool);
+}
+
+.import-rollback-btn {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.import-rollback-btn:hover:not(:disabled) {
+  background: var(--status-hot-bg);
+  color: var(--status-hot);
+  border-color: var(--status-hot);
+}
+
+.import-rollback-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.import-rollback-disabled {
+  color: var(--text-muted);
+  cursor: help;
+}
