@@ -277,7 +277,12 @@ function TemplateEditor({ template, onPatch, onSave, onDelete, onFeedback, isPen
           <div><strong>Subject:</strong> {previewSubject}</div>
         </div>
 
-        <div className="pipeline-preview-body" dangerouslySetInnerHTML={{ __html: previewBody }} />
+        <iframe
+          className="pipeline-preview-iframe"
+          title="Email preview"
+          srcDoc={previewBody}
+          sandbox=""
+        />
 
         <div className="pipeline-test-send">
           <h5>Send a test copy</h5>

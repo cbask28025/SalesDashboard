@@ -5,7 +5,6 @@ import SettingsForm from './settings-form'
 export const metadata = { title: 'Settings — CTB Sales Dashboard' }
 
 const DEFAULTS = {
-  sequence_timing: { email_1_to_2_days: 3, email_2_to_3_days: 5 },
   hot_lead_thresholds: { min_opens: 1, min_clicks: 1 },
   sending_rules: {
     daily_limit: 50,
@@ -45,7 +44,7 @@ export default async function SettingsPage({ searchParams }) {
     <div className="page-shell">
       <div className="page-heading">
         <h2>Settings</h2>
-        <p>Sequence timing, sending rules, Outlook connection, AI assistant, and notification preferences.</p>
+        <p>Hot lead thresholds, sending rules, Outlook connection, AI assistant, and notification preferences. Per-step delays live on each email in the Pipeline tab.</p>
       </div>
       <SettingsForm
         initialSettings={settings}

@@ -6,7 +6,7 @@ import { getStoredTokens } from '../../../lib/graph/tokens'
 import { sendMail } from '../../../lib/graph/client'
 
 const ALLOWED_KEYS = new Set([
-  'sequence_timing', 'hot_lead_thresholds', 'sending_rules',
+  'hot_lead_thresholds', 'sending_rules',
   'notification_prefs', 'assistant_system_prompt',
 ])
 

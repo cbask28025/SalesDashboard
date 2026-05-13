@@ -60,20 +60,10 @@ export default function SettingsForm({ initialSettings, outlook, oauthMessage })
         </div>
       )}
 
-      <Section title="1 · Email sequence timing">
-        <NumberField
-          label="Days between Email 1 and Email 2"
-          value={draft.sequence_timing.email_1_to_2_days}
-          onChange={(v) => patch('sequence_timing', { ...draft.sequence_timing, email_1_to_2_days: v })}
-        />
-        <NumberField
-          label="Days between Email 2 and Email 3"
-          value={draft.sequence_timing.email_2_to_3_days}
-          onChange={(v) => patch('sequence_timing', { ...draft.sequence_timing, email_2_to_3_days: v })}
-        />
-      </Section>
-
-      <Section title="2 · Hot lead thresholds" help="A reply always promotes a lead to hot, regardless of these thresholds.">
+      <Section
+        title="1 · Hot lead thresholds"
+        help="A reply always promotes a lead to hot, regardless of these thresholds. Per-step delays now live on each email in the Pipeline tab."
+      >
         <NumberField
           label="Minimum opens"
           value={draft.hot_lead_thresholds.min_opens}
@@ -86,7 +76,7 @@ export default function SettingsForm({ initialSettings, outlook, oauthMessage })
         />
       </Section>
 
-      <Section title="3 · Sending rules">
+      <Section title="2 · Sending rules">
         <NumberField
           label="Daily send limit"
           value={draft.sending_rules.daily_limit}
@@ -127,7 +117,7 @@ export default function SettingsForm({ initialSettings, outlook, oauthMessage })
         </label>
       </Section>
 
-      <Section title="4 · Outlook connection">
+      <Section title="3 · Outlook connection">
         {outlook.connected ? (
           <div className="settings-outlook-connected">
             <CheckCircle2 size={20} />
@@ -153,7 +143,7 @@ export default function SettingsForm({ initialSettings, outlook, oauthMessage })
         )}
       </Section>
 
-      <Section title="5 · AI assistant" help={`System prompt that drives the chat bubble. ~${promptTokens} tokens.`}>
+      <Section title="4 · AI assistant" help={`System prompt that drives the chat bubble. ~${promptTokens} tokens.`}>
         <label className="settings-field is-full">
           <span>System prompt</span>
           <textarea
@@ -164,7 +154,7 @@ export default function SettingsForm({ initialSettings, outlook, oauthMessage })
         </label>
       </Section>
 
-      <Section title="6 · Notification preferences">
+      <Section title="5 · Notification preferences">
         <CheckField
           label="New link clicks"
           checked={draft.notification_prefs.clicks}
