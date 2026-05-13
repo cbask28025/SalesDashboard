@@ -126,6 +126,12 @@ export async function testSendTemplate({ templateId, toEmail, firstName }) {
     })
     return { ok: true, sentTo: toEmail }
   } catch (err) {
-    return { ok: false, error: err.message }
+    return {
+      ok: false,
+      error: err?.message || 'Test send failed',
+      code: err?.code || null,
+      hint: err?.hint || null,
+      status: err?.status || null,
+    }
   }
 }

@@ -184,8 +184,14 @@ function TemplateEditor({ template, onPatch, onSave, onDelete, onFeedback, isPen
     onFeedback({ type: 'ok', message: 'Sending test…' })
     testSendTemplate({ templateId: template.id, toEmail: testEmail.trim(), firstName: testName.trim() })
       .then((res) => {
-        if (res.ok) onFeedback({ type: 'ok', message: `Test sent to ${res.sentTo}` })
-        else onFeedback({ type: 'err', message: res.error || 'Test send failed' })
+        if (res.ok) {
+          onFeedback({ type: 'ok', message: `Test sent to ${res.sentTo}` })
+        } else {
+          const parts = [res.error || 'Test send failed']
+          if (res.code) parts[0] = `${res.code}: ${parts[0]}`
+          if (res.hint) parts.push(res.hint)
+          onFeedback({ type: 'err', message: parts.join(' — ') })
+        }
       })
   }
 

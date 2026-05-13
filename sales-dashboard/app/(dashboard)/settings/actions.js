@@ -27,20 +27,33 @@ export async function saveSettings(updates) {
   return { ok: true, count: rows.length }
 }
 
-export async function sendTestEmail() {
+export async function sendTestEmail(toEmail) {
   const supabase = createClient()
   const tokens = await getStoredTokens(supabase)
-  if (!tokens?.account_email) return { ok: false, error: 'Outlook is not connected' }
+  if (!tokens?.account_email) {
+    return { ok: false, error: 'Microsoft account is not connected' }
+  }
+
+  const recipient = (toEmail || '').trim() || tokens.account_email
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+    return { ok: false, error: 'Enter a valid email address to send the test to' }
+  }
 
   try {
     await sendMail(supabase, {
-      to: tokens.account_email,
+      to: recipient,
       subject: 'CTB Sales Dashboard — Test send',
-      htmlBody: '<p>This is a test email sent from the CTB Sales Dashboard. Your Outlook connection is working.</p>',
+      htmlBody: '<p>This is a test email sent from the CTB Sales Dashboard. If you can read this, your Microsoft account is wired up correctly for outbound sends.</p>',
     })
-    return { ok: true, sentTo: tokens.account_email }
+    return { ok: true, sentTo: recipient }
   } catch (err) {
-    return { ok: false, error: err.message }
+    return {
+      ok: false,
+      error: err?.message || 'Send failed',
+      code: err?.code || null,
+      hint: err?.hint || null,
+      status: err?.status || null,
+    }
   }
 }
 

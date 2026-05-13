@@ -45,7 +45,6 @@ export default function SettingsForm({
   const [editingDoc, setEditingDoc] = useState(null)
   const [isPending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState(oauthMessage ? { type: 'info', message: oauthMessage } : null)
-  const [testResult, setTestResult] = useState(null)
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(initialSettings), [draft, initialSettings])
 
@@ -64,14 +63,6 @@ export default function SettingsForm({
   function discard() {
     setDraft(initialSettings)
     setFeedback(null)
-  }
-
-  function testSend() {
-    setTestResult(null)
-    startTransition(async () => {
-      const res = await sendTestEmail()
-      setTestResult(res.ok ? { ok: true, message: `Sent test to ${res.sentTo}` } : { ok: false, message: res.error })
-    })
   }
 
   async function disconnect() {
@@ -177,28 +168,21 @@ export default function SettingsForm({
         </label>
       </Section>
 
-      <Section title="3 · Outlook connection">
+      <Section
+        title="3 · Sending account"
+        help="Outbound mail and reply polling go through Microsoft Graph. Works with any Microsoft account that has an active mailbox — Outlook.com, Hotmail, or a Microsoft 365 business address. Personal Microsoft accounts using a non-Microsoft email as username (e.g. @gmail.com) may authenticate but lack a mailbox to send from."
+      >
         {outlook.connected ? (
-          <div className="settings-outlook-connected">
-            <CheckCircle2 size={20} />
-            <div>
-              <strong>Connected as {outlook.accountEmail}</strong>
-              {outlook.connectedAt && <p>Connected {format(new Date(outlook.connectedAt), 'MMM d, yyyy')}</p>}
-            </div>
-            <div className="settings-outlook-actions">
-              <a href="/api/auth/outlook/start" className="settings-link-btn"><RefreshCw size={13} /> Reconnect</a>
-              <button onClick={disconnect} className="settings-danger"><LogOut size={13} /> Disconnect</button>
-              <button onClick={testSend} disabled={isPending}><Send size={13} /> Send test email</button>
-            </div>
-            {testResult && (
-              <div className={`leads-feedback is-${testResult.ok ? 'ok' : 'err'}`}>{testResult.message}</div>
-            )}
-          </div>
+          <ConnectedAccount
+            outlook={outlook}
+            isPending={isPending}
+            onDisconnect={disconnect}
+          />
         ) : (
           <div className="settings-outlook-disconnected">
             <AlertCircle size={20} />
-            <span>Outlook not connected. Connect to enable sending and reply polling.</span>
-            <a href="/api/auth/outlook/start" className="settings-link-btn">Connect Outlook</a>
+            <span>No Microsoft account connected. Connect to enable sending and reply polling.</span>
+            <a href="/api/auth/outlook/start" className="settings-link-btn">Connect Microsoft account</a>
           </div>
         )}
       </Section>
@@ -347,6 +331,81 @@ export default function SettingsForm({
           onClose={() => { setShowNewDoc(false); setEditingDoc(null) }}
           onSaved={handleDocSaved}
         />
+      )}
+    </div>
+  )
+}
+
+function ConnectedAccount({ outlook, isPending, onDisconnect }) {
+  const [testTo, setTestTo] = useState(outlook.accountEmail || '')
+  const [testStatus, setTestStatus] = useState(null)
+  const [testing, setTesting] = useState(false)
+
+  async function runTest() {
+    setTestStatus(null)
+    setTesting(true)
+    const res = await sendTestEmail(testTo)
+    setTesting(false)
+    setTestStatus(res)
+  }
+
+  return (
+    <div className="account-card">
+      <header className="account-card-head">
+        <CheckCircle2 size={18} />
+        <div className="account-card-info">
+          <strong>Connected as {outlook.accountEmail}</strong>
+          {outlook.connectedAt && (
+            <p>Authorized {format(new Date(outlook.connectedAt), 'MMM d, yyyy')}</p>
+          )}
+        </div>
+        <div className="account-card-buttons">
+          <a href="/api/auth/outlook/start" className="account-btn">
+            <RefreshCw size={13} /> Reconnect
+          </a>
+          <button type="button" onClick={onDisconnect} className="account-btn account-btn-danger">
+            <LogOut size={13} /> Disconnect
+          </button>
+        </div>
+      </header>
+
+      <div className="account-card-test">
+        <label>
+          Send a test email to
+          <input
+            type="email"
+            value={testTo}
+            onChange={(e) => setTestTo(e.target.value)}
+            placeholder="your-email@example.com"
+            disabled={testing || isPending}
+          />
+        </label>
+        <button
+          type="button"
+          className="upload-btn-primary"
+          onClick={runTest}
+          disabled={testing || isPending || !testTo}
+        >
+          <Send size={13} /> {testing ? 'Sending…' : 'Send test'}
+        </button>
+      </div>
+
+      {testStatus && (
+        <div className={`account-card-result is-${testStatus.ok ? 'ok' : 'err'}`}>
+          {testStatus.ok ? (
+            <span><CheckCircle2 size={14} /> Sent to <strong>{testStatus.sentTo}</strong> — check that inbox.</span>
+          ) : (
+            <>
+              <div className="account-card-result-head">
+                <AlertCircle size={14} />
+                <strong>{testStatus.code ? `Microsoft Graph (${testStatus.code})` : 'Test failed'}</strong>
+                {testStatus.status ? <code>HTTP {testStatus.status}</code> : null}
+              </div>
+              <p>{testStatus.error}</p>
+              {testStatus.hint && <p className="account-card-result-hint">{testStatus.hint}</p>}
+            </>
+          )}
+        </div>
       )}
     </div>
   )

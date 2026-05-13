@@ -3431,57 +3431,221 @@ select:focus {
   border-color: var(--ctb-blue);
 }
 
-.settings-outlook-connected,
 .settings-outlook-disconnected {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  flex-wrap: wrap;
-}
-
-.settings-outlook-connected {
-  background: var(--status-success-bg);
-  color: var(--status-success);
-}
-
-.settings-outlook-connected strong { color: var(--text-primary); font-size: 14px; }
-.settings-outlook-connected p { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
-.settings-outlook-connected > div:nth-child(2) { flex: 1; }
-
-.settings-outlook-disconnected {
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
   background: var(--status-warm-bg);
   color: var(--status-warm);
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
-.settings-outlook-actions {
-  display: flex;
-  gap: 8px;
+.settings-outlook-disconnected span {
+  flex: 1;
+  color: var(--text-secondary);
 }
 
-.settings-outlook-actions button,
 .settings-link-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   background: var(--bg-card);
   border: 1px solid var(--border-default);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
   font-family: var(--font-body);
   text-decoration: none;
+  white-space: nowrap;
 }
 
-.settings-outlook-actions button:hover,
 .settings-link-btn:hover {
-  background: var(--bg-tertiary);
+  background: var(--bg-input-hover);
   color: var(--text-primary);
   text-decoration: none;
+}
+
+/* Connected-account card — stacks vertically so buttons never crowd */
+.account-card {
+  background: var(--status-success-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.account-card-head {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.account-card-head > svg {
+  color: var(--status-success);
+}
+
+.account-card-info strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.account-card-info p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.account-card-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-body);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.account-btn:hover:not(:disabled) {
+  background: var(--bg-input-hover);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.account-btn-danger { color: var(--status-hot); }
+
+.account-btn-danger:hover:not(:disabled) {
+  background: var(--status-hot-bg);
+  border-color: var(--status-hot);
+}
+
+.account-card-test {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-sm);
+  align-items: end;
+  padding: var(--space-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.account-card-test label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.account-card-test input {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 460;
+  font-family: var(--font-body);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+
+.account-card-test input:focus {
+  outline: none;
+  border-color: var(--ctb-blue);
+}
+
+.account-card-test button {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-card-result {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.account-card-result.is-ok {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+  border: 1px solid var(--status-success);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-card-result.is-ok strong { color: inherit; }
+
+.account-card-result.is-err {
+  background: var(--status-hot-bg);
+  border: 1px solid var(--status-hot);
+  color: var(--text-primary);
+}
+
+.account-card-result-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--status-hot);
+}
+
+.account-card-result-head strong { color: var(--status-hot); font-size: 13px; }
+
+.account-card-result-head code {
+  background: var(--bg-card);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  margin-left: auto;
+}
+
+.account-card-result.is-err p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.account-card-result-hint {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--status-hot);
+  color: var(--text-secondary) !important;
+}
+
+@media (max-width: 700px) {
+  .account-card-head { grid-template-columns: 20px 1fr; }
+  .account-card-buttons { grid-column: 1 / -1; }
+  .account-card-test { grid-template-columns: 1fr; }
 }
 
 .settings-danger { color: var(--status-hot) !important; }
