@@ -10,11 +10,13 @@ import {
   MessageSquare,
   CheckSquare,
   Settings,
+  Workflow,
 } from 'lucide-react'
 
 const NAV = [
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/upload', label: 'Upload', icon: Upload },
+  { href: '/pipeline', label: 'Email Pipeline', icon: Workflow },
   { href: '/leads', label: 'All Leads', icon: Users },
   { href: '/hot', label: 'Hot Leads', icon: Flame },
   { href: '/replies', label: 'Replies', icon: MessageSquare },

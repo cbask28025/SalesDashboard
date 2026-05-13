@@ -17,12 +17,13 @@ const STATUS_COLORS = {
   demo_scheduled: '#6B5BA8',
   negotiating: '#6B5BA8',
   closed_won: '#4A8C5C',
-  closed_lost: '#7A8499',
   not_interested: '#7A8499',
-  unsubscribed: '#7A8499',
   bounced: '#D14D5C',
-  on_hold: '#D9A047',
 }
+
+// Statuses excluded from the pipeline chart (they're tracked in the DB but
+// don't represent live pipeline state worth visualizing).
+const PIPELINE_CHART_EXCLUDES = new Set(['on_hold', 'unsubscribed', 'closed_lost'])
 
 const EVENT_LABEL = { open: 'Opened', click: 'Clicked', reply: 'Replied', bounce: 'Bounced', unsubscribe: 'Unsubscribed' }
 const TEMPLATE_LABEL = { email_1: 'Email 1', email_2: 'Email 2', email_3: 'Email 3', reply: 'Reply' }
@@ -37,22 +38,28 @@ export default function AnalyticsView({ stats }) {
     router.push(`/analytics?${sp.toString()}`)
   }
 
-  const opens = stats.events.open || 0
-  const clicks = stats.events.click || 0
-  const replies = stats.events.reply || 0
   const sends = stats.totals.sendsInRange || 0
+  const uniqueOpens = stats.events.unique?.open || 0
+  const uniqueClicks = stats.events.unique?.click || 0
+  const uniqueReplies = stats.events.unique?.reply || 0
+  const totalOpens = stats.events.totals?.open || 0
+  const totalClicks = stats.events.totals?.click || 0
+  const totalReplies = stats.events.totals?.reply || 0
 
-  const openRate = sends > 0 ? Math.round((opens / sends) * 100) : 0
-  const clickRate = sends > 0 ? Math.round((clicks / sends) * 100) : 0
+  // Rates use unique-by-send counts so they can never exceed 100%.
+  const openRate = sends > 0 ? Math.min(100, Math.round((uniqueOpens / sends) * 100)) : 0
+  const clickRate = sends > 0 ? Math.min(100, Math.round((uniqueClicks / sends) * 100)) : 0
 
+  // Funnel uses raw totals so engagement intensity is visible.
   const funnelData = [
-    { name: 'Sent', value: sends, fill: '#3D5A9C' },
-    { name: 'Opened', value: opens, fill: '#5878B8' },
-    { name: 'Clicked', value: clicks, fill: '#D9A047' },
-    { name: 'Replied', value: replies, fill: '#D14D5C' },
+    { name: 'Sent',    value: sends,        fill: '#3D5A9C' },
+    { name: 'Opened',  value: totalOpens,   fill: '#5878B8' },
+    { name: 'Clicked', value: totalClicks,  fill: '#D9A047' },
+    { name: 'Replied', value: totalReplies, fill: '#D14D5C' },
   ]
 
   const statusData = STATUS_ORDER
+    .filter((s) => !PIPELINE_CHART_EXCLUDES.has(s))
     .map((s) => ({ status: s, label: STATUS_LABEL[s], count: stats.statusBreakdown[s] || 0 }))
     .filter((d) => d.count > 0)
 
@@ -65,11 +72,11 @@ export default function AnalyticsView({ stats }) {
 
       <div className="analytics-stat-grid">
         <StatCard label="Total leads" value={stats.totals.leads} />
-        <StatCard label="In sequence" value={stats.totals.sequencing} />
         <StatCard label="Hot leads" value={stats.totals.hot} />
         <StatCard label={`Emails sent ${stats.range === 'month' ? '(this month)' : '(all time)'}`} value={sends} />
         <StatCard label="Open rate" value={`${openRate}%`} />
         <StatCard label="Click rate" value={`${clickRate}%`} />
+        <StatCard label="Replies" value={uniqueReplies} />
       </div>
 
       <div className="analytics-charts">
@@ -91,7 +98,7 @@ export default function AnalyticsView({ stats }) {
         <section className="analytics-card">
           <h3>Pipeline by status</h3>
           {statusData.length === 0 ? (
-            <p className="drawer-empty">No leads yet.</p>
+            <p className="drawer-empty">No active pipeline leads yet.</p>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={statusData} margin={{ top: 5, right: 20, bottom: 5, left: 5 }}>

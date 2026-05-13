@@ -12,18 +12,16 @@ async function loadStats(supabase, range) {
   const sinceIso = range === 'month' ? startOfMonthIso() : '1970-01-01T00:00:00Z'
 
   const [
-    leadsTotal, leadsSequencing, leadsHot,
-    sendsTotal, sendsThisMonth,
-    eventsByType,
+    leadsTotal, leadsHot,
+    sendsTotal,
+    rawEvents,
     leadsByStatus,
     recentEvents,
   ] = await Promise.all([
     supabase.from('v2_leads').select('id', { count: 'exact', head: true }),
-    supabase.from('v2_leads').select('id', { count: 'exact', head: true }).eq('status', 'sequencing'),
     supabase.from('v2_leads').select('id', { count: 'exact', head: true }).eq('status', 'hot'),
     supabase.from('v2_email_sends').select('id', { count: 'exact', head: true }).gte('sent_at', sinceIso),
-    supabase.from('v2_email_sends').select('id', { count: 'exact', head: true }).gte('sent_at', startOfMonthIso()),
-    supabase.from('v2_email_events').select('event_type').gte('occurred_at', sinceIso),
+    supabase.from('v2_email_events').select('event_type, email_send_id').gte('occurred_at', sinceIso),
     supabase.from('v2_leads').select('status'),
     supabase
       .from('v2_email_events')
@@ -33,9 +31,18 @@ async function loadStats(supabase, range) {
       .limit(50),
   ])
 
-  const eventCounts = { open: 0, click: 0, reply: 0, bounce: 0, unsubscribe: 0 }
-  for (const e of eventsByType.data || []) {
-    if (eventCounts[e.event_type] !== undefined) eventCounts[e.event_type]++
+  // Count UNIQUE sends per event type so rates can never exceed 100%.
+  // (A single email opened 3 times only counts as one "opened send".)
+  const uniqueOpens = new Set()
+  const uniqueClicks = new Set()
+  const uniqueReplies = new Set()
+  const eventTotals = { open: 0, click: 0, reply: 0, bounce: 0, unsubscribe: 0 }
+  for (const e of rawEvents.data || []) {
+    if (eventTotals[e.event_type] !== undefined) eventTotals[e.event_type]++
+    if (!e.email_send_id) continue
+    if (e.event_type === 'open') uniqueOpens.add(e.email_send_id)
+    else if (e.event_type === 'click') uniqueClicks.add(e.email_send_id)
+    else if (e.event_type === 'reply') uniqueReplies.add(e.email_send_id)
   }
 
   const statusBreakdown = {}
@@ -47,12 +54,19 @@ async function loadStats(supabase, range) {
     range,
     totals: {
       leads: leadsTotal.count || 0,
-      sequencing: leadsSequencing.count || 0,
       hot: leadsHot.count || 0,
       sendsInRange: sendsTotal.count || 0,
-      sendsThisMonth: sendsThisMonth.count || 0,
     },
-    events: eventCounts,
+    events: {
+      // raw totals (used for funnel chart so multiple-opens still affect the funnel shape)
+      totals: eventTotals,
+      // unique-by-send counts (used for rate %s)
+      unique: {
+        open: uniqueOpens.size,
+        click: uniqueClicks.size,
+        reply: uniqueReplies.size,
+      },
+    },
     statusBreakdown,
     recentEvents: recentEvents.data || [],
   }
