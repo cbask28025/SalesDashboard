@@ -1,2 +1,2 @@
 # SalesDashboard
-Dad's Sales Dashboard
+Dad's Sales Dashboard.
