@@ -197,13 +197,17 @@ export default function SettingsForm({ initialSettings, outlook, aiUsage, docume
         )}
       </Section>
 
-      <Section title="4 · AI assistant" help={`System prompt that drives the chat bubble. ~${promptTokens} tokens.`}>
+      <Section
+        title="4 · AI personality"
+        help={`Who the AI is and how it speaks. Drives both the chat assistant AND the reply drafter — write it as if you're describing the person Dad would want answering on his behalf. ~${promptTokens} tokens.`}
+      >
         <label className="settings-field is-full">
-          <span>System prompt</span>
+          <span>Personality &amp; tone (system prompt)</span>
           <textarea
-            rows={6}
+            rows={8}
             value={draft.assistant_system_prompt || ''}
             onChange={(e) => patch('assistant_system_prompt', e.target.value)}
+            placeholder={`Example:\nYou are Dad's sales assistant at Choosing the Best. You speak the way Dad does: warm, professional, never pushy. You sign off as "Dad". You always offer a concrete next step.`}
           />
         </label>
       </Section>

@@ -23,15 +23,25 @@ Definitions:
 
 Respond with ONLY valid JSON, no markdown.`
 
-const DRAFT_PROMPT = `You draft email replies for a K-12 health curriculum sales rep (Choosing the Best). Voice: warm, professional, concise. No exclamation points. No emojis. Always sign as the rep's first name. Default to short replies under 100 words unless a longer answer is required.
-
-Given the prior email thread + the prospect's reply, draft a response that:
+// Behavioural rules for the reply drafter. The "who the AI is and how it
+// speaks" comes from the user-configurable personality stored in
+// v2_settings.assistant_system_prompt and is prepended at runtime.
+const DRAFT_BEHAVIOR = `Given the prior email thread + the prospect's reply, draft a response that:
 - For positive: confirms interest, suggests a concrete next step (call or send materials), proposes 2 specific times.
 - For question: answers the question directly, then offers a next step.
 - For negative: thanks them, leaves the door open, offers to circle back later (no pushiness).
 - For unsubscribe: confirms removal politely. One sentence.
 
 Return ONLY plain text, no greeting fields, no preamble. Start with "Hi {first_name},".`
+
+async function loadPersonality(supabase) {
+  const { data } = await supabase
+    .from('v2_settings')
+    .select('value')
+    .eq('key', 'assistant_system_prompt')
+    .maybeSingle()
+  return typeof data?.value === 'string' ? data.value.trim() : ''
+}
 
 async function loadReferenceDocs(supabase) {
   const { data, error } = await supabase
@@ -91,20 +101,25 @@ export async function draftReply(supabase, replyBody, lead, classification) {
     return `Hi ${firstName},\n\nThanks for getting back to me. (Draft generator is offline — please reply manually.)\n\nBest,\n${process.env.SENDER_NAME || ''}`
   }
 
-  const docContext = await loadReferenceDocs(supabase)
-  const docsBlock = docContext
-    ? `\n\nReference materials (lean on these when relevant; cite specifics rather than making them up):\n\n${docContext}\n`
-    : ''
+  const [personality, docContext] = await Promise.all([
+    loadPersonality(supabase),
+    loadReferenceDocs(supabase),
+  ])
+
+  const systemPrompt = [
+    personality,
+    DRAFT_BEHAVIOR.replace('{first_name}', firstName),
+    docContext ? `Reference materials (lean on these when relevant; cite specifics rather than making them up):\n\n${docContext}` : '',
+  ].filter(Boolean).join('\n\n')
 
   try {
     const resp = await c.messages.create({
       model: MODEL,
       max_tokens: 800,
+      system: systemPrompt,
       messages: [{
         role: 'user',
-        content: `${DRAFT_PROMPT.replace('{first_name}', firstName)}${docsBlock}
-
-Classification: ${classification}
+        content: `Classification: ${classification}
 Lead: ${firstName} ${lead.last_name || ''} (${lead.title || 'unknown title'}) at ${lead.district_name || 'unknown district'}
 
 Their reply:
