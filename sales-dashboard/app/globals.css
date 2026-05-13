@@ -4243,3 +4243,170 @@ select:focus {
   border-bottom: none;
   font-weight: 600;
 }
+
+/* ============================================================
+   v2 — Anthropic API key (Settings section 5)
+   ============================================================ */
+
+.anthropic-key-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.anthropic-key-card {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: var(--space-md);
+  align-items: flex-start;
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.anthropic-key-card > svg { margin-top: 2px; }
+
+.anthropic-key-card.is-ok {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.anthropic-key-card.is-warn {
+  background: var(--status-warm-bg);
+  color: var(--status-warm);
+}
+
+.anthropic-key-card.is-err {
+  background: var(--status-hot-bg);
+  color: var(--status-hot);
+}
+
+.anthropic-key-card strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.anthropic-key-card code {
+  display: inline-block;
+  margin-top: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-radius: var(--radius-xs);
+}
+
+.anthropic-key-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 460;
+}
+
+.anthropic-key-actions {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.anthropic-key-actions button {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+.anthropic-key-actions button:hover:not(:disabled) {
+  background: var(--bg-input-hover);
+  color: var(--text-primary);
+}
+
+.anthropic-key-actions button.settings-danger {
+  color: var(--status-hot);
+}
+
+.anthropic-key-actions button.settings-danger:hover:not(:disabled) {
+  background: var(--status-hot-bg);
+  border-color: var(--status-hot);
+}
+
+.anthropic-key-edit {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.anthropic-key-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.anthropic-key-row {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.anthropic-key-row:focus-within { border-color: var(--ctb-blue); }
+
+.anthropic-key-row input {
+  flex: 1;
+  border: none;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  background: transparent;
+  color: var(--text-primary);
+  outline: none;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.anthropic-key-eye {
+  background: transparent;
+  border: none;
+  padding: 0 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.anthropic-key-eye:hover { color: var(--text-primary); }
+
+.anthropic-key-edit-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.anthropic-key-note {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-weight: 460;
+  line-height: 1.5;
+  margin: 0;
+}

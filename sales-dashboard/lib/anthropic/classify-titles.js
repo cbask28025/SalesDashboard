@@ -2,7 +2,7 @@
 // Strategy: keyword rules (cheap, deterministic) → Claude API for ambiguous → tier3 default.
 // Results cached in v2_settings.title_classifications.
 
-import Anthropic from '@anthropic-ai/sdk'
+import { getAnthropicClient } from './auth'
 import { logAiUsage } from './usage'
 
 const MODEL = 'claude-haiku-4-5-20251001'
@@ -20,12 +20,11 @@ function keywordTier(title) {
 }
 
 async function claudeTier(supabase, titles) {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key || titles.length === 0) {
+  if (titles.length === 0) return {}
+  const client = await getAnthropicClient(supabase)
+  if (!client) {
     return Object.fromEntries(titles.map((t) => [t, 'tier3']))
   }
-
-  const client = new Anthropic({ apiKey: key })
   const prompt = `You classify K-12 education job titles into three tiers for sales prioritization.
 
 tier1 = decision-makers who control curriculum purchases: Superintendent, Director of Curriculum, Director of Instruction, Health Coordinator, Curriculum Director.

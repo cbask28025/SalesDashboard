@@ -3,11 +3,12 @@
 import { useMemo, useRef, useState, useTransition } from 'react'
 import {
   CheckCircle2, AlertCircle, RefreshCw, LogOut, Send,
-  Plus, Trash2, FileText, X, Upload,
+  Plus, Trash2, FileText, X, Upload, Key, Eye, EyeOff,
 } from 'lucide-react'
 import {
   saveSettings, sendTestEmail,
   addReferenceDocument, updateReferenceDocument, deleteReferenceDocument,
+  saveAnthropicKey, removeAnthropicKey, testAnthropicKey,
 } from './actions'
 import { format } from 'date-fns'
 
@@ -32,7 +33,12 @@ function formatUSD(cents) {
   return dollars.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
 }
 
-export default function SettingsForm({ initialSettings, outlook, aiUsage, documents: initialDocs, oauthMessage }) {
+export default function SettingsForm({
+  initialSettings, outlook, aiUsage,
+  documents: initialDocs,
+  anthropicKey: initialAnthropic,
+  oauthMessage,
+}) {
   const [draft, setDraft] = useState(initialSettings)
   const [docs, setDocs] = useState(initialDocs || [])
   const [showNewDoc, setShowNewDoc] = useState(false)
@@ -212,8 +218,10 @@ export default function SettingsForm({ initialSettings, outlook, aiUsage, docume
         </label>
       </Section>
 
+      <AnthropicKeySection initial={initialAnthropic} onFeedback={setFeedback} />
+
       <Section
-        title="5 · AI reference documents"
+        title="6 · AI reference documents"
         help="Documents the AI will draw from when drafting reply responses. Add case studies, pricing sheets, FAQs — anything the AI should cite from. Name + purpose tell Claude when to use it."
       >
         <div className="ai-docs-list settings-field is-full">
@@ -258,7 +266,7 @@ export default function SettingsForm({ initialSettings, outlook, aiUsage, docume
       </Section>
 
       <Section
-        title="6 · AI cost report"
+        title="7 · AI cost report"
         help="Estimated cost based on token usage. Updated every time the AI runs."
       >
         <div className="ai-cost-grid settings-field is-full">
@@ -295,7 +303,7 @@ export default function SettingsForm({ initialSettings, outlook, aiUsage, docume
         )}
       </Section>
 
-      <Section title="7 · Notification preferences">
+      <Section title="8 · Notification preferences">
         <CheckField
           label="New link clicks"
           checked={draft.notification_prefs.clicks}
@@ -341,6 +349,173 @@ export default function SettingsForm({ initialSettings, outlook, aiUsage, docume
         />
       )}
     </div>
+  )
+}
+
+function AnthropicKeySection({ initial, onFeedback }) {
+  const [status, setStatus] = useState(initial)
+  const [editing, setEditing] = useState(initial?.source !== 'user')
+  const [keyInput, setKeyInput] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState(null)
+  const [isPending, startTransition] = useTransition()
+
+  async function doTest() {
+    setTesting(true)
+    setTestResult(null)
+    const res = await testAnthropicKey(keyInput)
+    setTesting(false)
+    setTestResult(res)
+  }
+
+  function doSave() {
+    startTransition(async () => {
+      const res = await saveAnthropicKey(keyInput)
+      if (!res.ok) return setTestResult({ ok: false, error: res.error })
+      const masked = `${keyInput.trim().slice(0, 10)}…${keyInput.trim().slice(-4)}`
+      setStatus({ source: 'user', masked, updatedAt: new Date().toISOString() })
+      setKeyInput('')
+      setEditing(false)
+      setTestResult(null)
+      onFeedback({ type: 'ok', message: 'Anthropic API key saved' })
+    })
+  }
+
+  function doRemove() {
+    if (!confirm('Remove your Anthropic API key? AI features will fall back to the dashboard default or be disabled.')) return
+    startTransition(async () => {
+      const res = await removeAnthropicKey()
+      if (!res.ok) return onFeedback({ type: 'err', message: res.error })
+      setStatus({ source: process.env.NEXT_PUBLIC_HAS_ENV_ANTHROPIC === '1' ? 'env' : 'none', masked: null, updatedAt: null })
+      setEditing(true)
+      onFeedback({ type: 'ok', message: 'API key removed' })
+    })
+  }
+
+  return (
+    <section className="settings-section">
+      <header>
+        <h3>5 · AI provider (Anthropic API key)</h3>
+        <p>
+          Plug in your own Claude API key so AI usage bills to your account instead of the dashboard's default.
+          Use this if Dad's company already has Claude credentials. Get a key at{' '}
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>.
+        </p>
+      </header>
+
+      <div className="settings-fields">
+        <div className="settings-field is-full anthropic-key-status">
+          {status.source === 'user' && !editing && (
+            <div className="anthropic-key-card is-ok">
+              <Key size={16} />
+              <div>
+                <strong>Using your Anthropic key</strong>
+                <code>{status.masked}</code>
+                {status.updatedAt && (
+                  <span>Saved {format(new Date(status.updatedAt), 'MMM d, yyyy')}</span>
+                )}
+              </div>
+              <div className="anthropic-key-actions">
+                <button type="button" onClick={() => { setEditing(true); setKeyInput('') }}>Replace</button>
+                <button type="button" className="settings-danger" onClick={doRemove} disabled={isPending}>Remove</button>
+              </div>
+            </div>
+          )}
+
+          {status.source === 'env' && !editing && (
+            <div className="anthropic-key-card is-warn">
+              <AlertCircle size={16} />
+              <div>
+                <strong>Using the dashboard's default key</strong>
+                <span>AI usage costs are billed to the dashboard owner, not your account. Add your own key below to take over the bill.</span>
+              </div>
+              <div className="anthropic-key-actions">
+                <button type="button" onClick={() => setEditing(true)}>Add your key</button>
+              </div>
+            </div>
+          )}
+
+          {status.source === 'none' && !editing && (
+            <div className="anthropic-key-card is-err">
+              <AlertCircle size={16} />
+              <div>
+                <strong>No AI key configured</strong>
+                <span>Title classification, reply drafts, task suggestions, and the chat assistant are all disabled until you add a key.</span>
+              </div>
+              <div className="anthropic-key-actions">
+                <button type="button" onClick={() => setEditing(true)}>Add a key</button>
+              </div>
+            </div>
+          )}
+
+          {editing && (
+            <div className="anthropic-key-edit">
+              <label className="anthropic-key-input">
+                <span>Paste your Anthropic API key</span>
+                <div className="anthropic-key-row">
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    value={keyInput}
+                    onChange={(e) => { setKeyInput(e.target.value); setTestResult(null) }}
+                    placeholder="sk-ant-api03-..."
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    className="anthropic-key-eye"
+                    onClick={() => setShowKey((s) => !s)}
+                    title={showKey ? 'Hide' : 'Show'}
+                  >
+                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </label>
+
+              {testResult && (
+                <div className={`leads-feedback is-${testResult.ok ? 'ok' : 'err'}`}>
+                  {testResult.ok ? (testResult.message || 'Key is valid') : testResult.error}
+                </div>
+              )}
+
+              <div className="anthropic-key-edit-actions">
+                <button
+                  type="button"
+                  className="upload-btn-secondary"
+                  onClick={doTest}
+                  disabled={testing || !keyInput.trim()}
+                >
+                  {testing ? 'Testing…' : 'Test connection'}
+                </button>
+                <button
+                  type="button"
+                  className="upload-btn-primary"
+                  onClick={doSave}
+                  disabled={isPending || !keyInput.trim()}
+                >
+                  {isPending ? 'Saving…' : 'Save key'}
+                </button>
+                {status.source === 'user' && (
+                  <button
+                    type="button"
+                    className="upload-btn-secondary"
+                    onClick={() => { setEditing(false); setKeyInput(''); setTestResult(null) }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+
+              <p className="anthropic-key-note">
+                Your key is stored server-side and never sent to the browser. It's only used to authenticate
+                outbound calls to Anthropic from the dashboard.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }
 

@@ -1,5 +1,6 @@
 'use server'
 
+import Anthropic from '@anthropic-ai/sdk'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../../lib/supabase/server'
 import { getStoredTokens } from '../../../lib/graph/tokens'
@@ -99,4 +100,62 @@ export async function deleteReferenceDocument(id) {
   if (error) return { ok: false, error: error.message }
   revalidatePath('/settings')
   return { ok: true }
+}
+
+// ============================================================
+// Anthropic API key management
+// ============================================================
+
+const ANTHROPIC_KEY_SETTING = 'anthropic_api_key'
+
+export async function saveAnthropicKey(rawKey) {
+  const key = (rawKey || '').trim()
+  if (!key) return { ok: false, error: 'API key required' }
+  if (!key.startsWith('sk-ant-')) {
+    return { ok: false, error: 'Anthropic API keys start with "sk-ant-". Double-check the value from console.anthropic.com.' }
+  }
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('v2_settings')
+    .upsert(
+      { key: ANTHROPIC_KEY_SETTING, value: key, updated_at: new Date().toISOString() },
+      { onConflict: 'key' },
+    )
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/settings')
+  return { ok: true }
+}
+
+export async function removeAnthropicKey() {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('v2_settings')
+    .delete()
+    .eq('key', ANTHROPIC_KEY_SETTING)
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/settings')
+  return { ok: true }
+}
+
+export async function testAnthropicKey(rawKey) {
+  const key = (rawKey || '').trim()
+  if (!key) return { ok: false, error: 'Paste a key to test' }
+  if (!key.startsWith('sk-ant-')) {
+    return { ok: false, error: 'Anthropic API keys start with "sk-ant-"' }
+  }
+  try {
+    const client = new Anthropic({ apiKey: key })
+    await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 10,
+      messages: [{ role: 'user', content: 'ping' }],
+    })
+    return { ok: true, message: 'Key is valid' }
+  } catch (err) {
+    const status = err?.status || ''
+    const msg = err?.message || 'Test failed'
+    if (status === 401) return { ok: false, error: 'Anthropic rejected the key (401 — invalid or revoked)' }
+    if (status === 403) return { ok: false, error: 'Key is valid but lacks permission for this model' }
+    return { ok: false, error: msg }
+  }
 }

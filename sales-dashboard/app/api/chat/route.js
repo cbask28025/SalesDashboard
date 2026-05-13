@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '../../../lib/supabase/server'
 import { TOOL_DEFINITIONS, READ_TOOLS, WRITE_TOOLS } from '../../../lib/anthropic/chat-tools'
 import { HANDLERS } from '../../../lib/anthropic/tool-handlers'
 import { logAiUsage } from '../../../lib/anthropic/usage'
+import { getAnthropicClient } from '../../../lib/anthropic/auth'
 
 const CHAT_MODEL = 'claude-sonnet-4-6'
 
@@ -12,12 +12,6 @@ export const maxDuration = 30
 
 const SYSTEM_PROMPT_KEY = 'assistant_system_prompt'
 const HISTORY_HOURS = 24
-
-function client() {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) return null
-  return new Anthropic({ apiKey: key })
-}
 
 async function loadSystemPrompt(supabase) {
   const { data } = await supabase
@@ -71,8 +65,8 @@ export async function POST(request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
 
-  const c = client()
-  if (!c) return NextResponse.json({ ok: false, error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })
+  const c = await getAnthropicClient(supabase)
+  if (!c) return NextResponse.json({ ok: false, error: 'No Anthropic API key configured (Settings → AI provider)' }, { status: 503 })
 
   const body = await request.json().catch(() => ({}))
   const sessionId = body.sessionId

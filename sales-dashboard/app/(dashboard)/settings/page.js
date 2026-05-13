@@ -73,13 +73,35 @@ async function loadDocuments(supabase) {
   return data || []
 }
 
+async function loadAnthropicKeyStatus(supabase) {
+  const { data } = await supabase
+    .from('v2_settings')
+    .select('value, updated_at')
+    .eq('key', 'anthropic_api_key')
+    .maybeSingle()
+  const userKey = typeof data?.value === 'string' ? data.value.trim() : ''
+  if (userKey) {
+    return {
+      source: 'user',
+      masked: `${userKey.slice(0, 10)}…${userKey.slice(-4)}`,
+      updatedAt: data?.updated_at || null,
+    }
+  }
+  return {
+    source: process.env.ANTHROPIC_API_KEY ? 'env' : 'none',
+    masked: null,
+    updatedAt: null,
+  }
+}
+
 export default async function SettingsPage({ searchParams }) {
   const supabase = createClient()
-  const [settings, tokens, aiUsage, documents] = await Promise.all([
+  const [settings, tokens, aiUsage, documents, anthropicKey] = await Promise.all([
     loadAll(supabase),
     getStoredTokens(supabase),
     loadAiUsage(supabase),
     loadDocuments(supabase),
+    loadAnthropicKeyStatus(supabase),
   ])
 
   const outlook = tokens?.access_token
@@ -102,6 +124,7 @@ export default async function SettingsPage({ searchParams }) {
         outlook={outlook}
         aiUsage={aiUsage}
         documents={documents}
+        anthropicKey={anthropicKey}
         oauthMessage={
           searchParams?.outlook_connected ? 'Outlook connected.' :
           searchParams?.outlook_error ? `Outlook error: ${searchParams.outlook_error}` :

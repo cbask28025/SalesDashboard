@@ -1,14 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { getAnthropicClient } from './auth'
 import { logAiUsage } from './usage'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_DOC_CONTEXT_CHARS = 8000
-
-function client() {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) return null
-  return new Anthropic({ apiKey: key })
-}
 
 const CLASSIFY_PROMPT = `You classify B2B sales email replies in the K-12 education space.
 Return a JSON object with two keys:
@@ -61,7 +55,7 @@ async function loadReferenceDocs(supabase) {
 }
 
 export async function classifyReply(supabase, replyBody, lead) {
-  const c = client()
+  const c = await getAnthropicClient(supabase)
   if (!c) return { classification: 'question', summary: replyBody.slice(0, 140) }
 
   try {
@@ -95,7 +89,7 @@ ${replyBody}
 }
 
 export async function draftReply(supabase, replyBody, lead, classification) {
-  const c = client()
+  const c = await getAnthropicClient(supabase)
   const firstName = lead.first_name || 'there'
   if (!c) {
     return `Hi ${firstName},\n\nThanks for getting back to me. (Draft generator is offline — please reply manually.)\n\nBest,\n${process.env.SENDER_NAME || ''}`
@@ -139,7 +133,7 @@ ${replyBody}
 export async function suggestTaskFromReply(supabase, replyBody, lead, classification) {
   // Only positive/question replies yield action-worthy tasks.
   if (classification === 'negative' || classification === 'unsubscribe') return null
-  const c = client()
+  const c = await getAnthropicClient(supabase)
   if (!c) return null
 
   try {
