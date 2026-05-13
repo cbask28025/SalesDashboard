@@ -10,6 +10,8 @@ const ALLOWED_KEYS = new Set([
   'notification_prefs', 'assistant_system_prompt',
 ])
 
+const MAX_DOC_CHARS = 50_000  // ~12 pages of text — plenty for case studies, FAQs, pricing sheets
+
 export async function saveSettings(updates) {
   const supabase = createClient()
   const rows = []
@@ -39,4 +41,62 @@ export async function sendTestEmail() {
   } catch (err) {
     return { ok: false, error: err.message }
   }
+}
+
+// ============================================================
+// AI reference documents
+// ============================================================
+
+export async function addReferenceDocument({ name, purpose, content, filename, fileSizeBytes }) {
+  if (!name?.trim()) return { ok: false, error: 'Name is required' }
+  if (!purpose?.trim()) return { ok: false, error: 'Purpose is required (so the AI knows when to use it)' }
+  if (!content?.trim()) return { ok: false, error: 'Document content is required' }
+  if (content.length > MAX_DOC_CHARS) {
+    return { ok: false, error: `Document is too long (${content.length} chars, max ${MAX_DOC_CHARS}). Trim it before saving.` }
+  }
+
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('v2_ai_documents')
+    .insert({
+      name: name.trim(),
+      purpose: purpose.trim(),
+      content: content.trim(),
+      filename: filename || null,
+      file_size_bytes: fileSizeBytes || content.length,
+      is_active: true,
+    })
+    .select()
+    .single()
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/settings')
+  return { ok: true, document: data }
+}
+
+export async function updateReferenceDocument(id, patch) {
+  const supabase = createClient()
+  const allowed = {}
+  if (typeof patch.name === 'string') allowed.name = patch.name.trim()
+  if (typeof patch.purpose === 'string') allowed.purpose = patch.purpose.trim()
+  if (typeof patch.content === 'string') {
+    if (patch.content.length > MAX_DOC_CHARS) {
+      return { ok: false, error: `Document too long (max ${MAX_DOC_CHARS} chars)` }
+    }
+    allowed.content = patch.content
+    allowed.file_size_bytes = patch.content.length
+  }
+  if (typeof patch.is_active === 'boolean') allowed.is_active = patch.is_active
+
+  const { error } = await supabase.from('v2_ai_documents').update(allowed).eq('id', id)
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/settings')
+  return { ok: true }
+}
+
+export async function deleteReferenceDocument(id) {
+  const supabase = createClient()
+  const { error } = await supabase.from('v2_ai_documents').delete().eq('id', id)
+  if (error) return { ok: false, error: error.message }
+  revalidatePath('/settings')
+  return { ok: true }
 }

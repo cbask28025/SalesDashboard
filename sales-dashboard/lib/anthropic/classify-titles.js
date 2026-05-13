@@ -3,6 +3,9 @@
 // Results cached in v2_settings.title_classifications.
 
 import Anthropic from '@anthropic-ai/sdk'
+import { logAiUsage } from './usage'
+
+const MODEL = 'claude-haiku-4-5-20251001'
 
 const TIER_1 = /superintendent|chief|^cao$|^cco$|director of curriculum|director of instruction|director of teaching|curriculum director|health coordinator|wellness coordinator|director of health/i
 const TIER_2 = /principal|department head|department chair|lead teacher|assistant principal|coordinator|specialist|administrator|^dean$/i
@@ -16,7 +19,7 @@ function keywordTier(title) {
   return null
 }
 
-async function claudeTier(titles) {
+async function claudeTier(supabase, titles) {
   const key = process.env.ANTHROPIC_API_KEY
   if (!key || titles.length === 0) {
     return Object.fromEntries(titles.map((t) => [t, 'tier3']))
@@ -37,10 +40,11 @@ ${titles.map((t) => `- ${t}`).join('\n')}`
 
   try {
     const resp = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: MODEL,
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     })
+    await logAiUsage(supabase, { feature: 'title_classify', model: MODEL, usage: resp.usage })
     const text = resp.content.find((b) => b.type === 'text')?.text ?? '{}'
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('No JSON in response')
@@ -92,7 +96,7 @@ export async function classifyTitles(supabase, titles) {
   }
 
   if (ambiguous.length > 0) {
-    const aiResults = await claudeTier(ambiguous)
+    const aiResults = await claudeTier(supabase, ambiguous)
     for (const [title, tier] of Object.entries(aiResults)) {
       result[title] = tier
       cache[title] = tier

@@ -127,10 +127,10 @@ async function run(request) {
         .maybeSingle()
       if (!lead) continue
 
-      const { classification, summary } = await classifyReply(body, lead)
+      const { classification, summary } = await classifyReply(supabase, body, lead)
       const aiDraft = classification === 'unsubscribe'
         ? null
-        : await draftReply(body, lead, classification)
+        : await draftReply(supabase, body, lead, classification)
 
       const { data: replyRow } = await supabase
         .from('v2_replies')
@@ -175,7 +175,7 @@ async function run(request) {
         message: `New reply from ${lead.first_name || lead.email} (${classification})`,
       })
 
-      const taskSuggestion = await suggestTaskFromReply(body, lead, classification)
+      const taskSuggestion = await suggestTaskFromReply(supabase, body, lead, classification)
       if (taskSuggestion) {
         await supabase.from('v2_tasks').insert({
           lead_id: lead.id,

@@ -83,7 +83,7 @@ export async function regenerateDraft(replyId) {
     .single()
   if (!reply) return { ok: false, error: 'Reply not found' }
 
-  const fresh = await draftReply(reply.body, reply.v2_leads, reply.classification || 'question')
+  const fresh = await draftReply(supabase, reply.body, reply.v2_leads, reply.classification || 'question')
   await supabase.from('v2_replies').update({ ai_draft: fresh }).eq('id', replyId)
   revalidatePath('/replies')
   return { ok: true, draft: fresh }

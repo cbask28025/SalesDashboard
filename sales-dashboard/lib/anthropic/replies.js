@@ -1,4 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { logAiUsage } from './usage'
+
+const MODEL = 'claude-haiku-4-5-20251001'
+const MAX_DOC_CONTEXT_CHARS = 8000
 
 function client() {
   const key = process.env.ANTHROPIC_API_KEY
@@ -29,13 +33,30 @@ Given the prior email thread + the prospect's reply, draft a response that:
 
 Return ONLY plain text, no greeting fields, no preamble. Start with "Hi {first_name},".`
 
-export async function classifyReply(replyBody, lead) {
+async function loadReferenceDocs(supabase) {
+  const { data, error } = await supabase
+    .from('v2_ai_documents')
+    .select('name, purpose, content')
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+  if (error || !data) return ''
+
+  let combined = ''
+  for (const doc of data) {
+    const block = `## ${doc.name}\n_When to use: ${doc.purpose}_\n\n${doc.content}\n\n`
+    if (combined.length + block.length > MAX_DOC_CONTEXT_CHARS) break
+    combined += block
+  }
+  return combined.trim()
+}
+
+export async function classifyReply(supabase, replyBody, lead) {
   const c = client()
   if (!c) return { classification: 'question', summary: replyBody.slice(0, 140) }
 
   try {
     const resp = await c.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: MODEL,
       max_tokens: 512,
       messages: [{
         role: 'user',
@@ -49,6 +70,7 @@ ${replyBody}
 """`,
       }],
     })
+    await logAiUsage(supabase, { feature: 'reply_classify', model: MODEL, usage: resp.usage })
     const text = resp.content.find((b) => b.type === 'text')?.text ?? '{}'
     const match = text.match(/\{[\s\S]*\}/)
     const parsed = match ? JSON.parse(match[0]) : {}
@@ -62,20 +84,25 @@ ${replyBody}
   }
 }
 
-export async function draftReply(replyBody, lead, classification) {
+export async function draftReply(supabase, replyBody, lead, classification) {
   const c = client()
   const firstName = lead.first_name || 'there'
   if (!c) {
     return `Hi ${firstName},\n\nThanks for getting back to me. (Draft generator is offline — please reply manually.)\n\nBest,\n${process.env.SENDER_NAME || ''}`
   }
 
+  const docContext = await loadReferenceDocs(supabase)
+  const docsBlock = docContext
+    ? `\n\nReference materials (lean on these when relevant; cite specifics rather than making them up):\n\n${docContext}\n`
+    : ''
+
   try {
     const resp = await c.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: MODEL,
       max_tokens: 800,
       messages: [{
         role: 'user',
-        content: `${DRAFT_PROMPT.replace('{first_name}', firstName)}
+        content: `${DRAFT_PROMPT.replace('{first_name}', firstName)}${docsBlock}
 
 Classification: ${classification}
 Lead: ${firstName} ${lead.last_name || ''} (${lead.title || 'unknown title'}) at ${lead.district_name || 'unknown district'}
@@ -86,6 +113,7 @@ ${replyBody}
 """`,
       }],
     })
+    await logAiUsage(supabase, { feature: 'reply_draft', model: MODEL, usage: resp.usage })
     return resp.content.find((b) => b.type === 'text')?.text ?? ''
   } catch (err) {
     console.error('Reply draft failed:', err.message)
@@ -93,7 +121,7 @@ ${replyBody}
   }
 }
 
-export async function suggestTaskFromReply(replyBody, lead, classification) {
+export async function suggestTaskFromReply(supabase, replyBody, lead, classification) {
   // Only positive/question replies yield action-worthy tasks.
   if (classification === 'negative' || classification === 'unsubscribe') return null
   const c = client()
@@ -101,7 +129,7 @@ export async function suggestTaskFromReply(replyBody, lead, classification) {
 
   try {
     const resp = await c.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: MODEL,
       max_tokens: 256,
       messages: [{
         role: 'user',
@@ -119,6 +147,7 @@ If no specific action is implied, return {"title": null}.
 Return JSON only.`,
       }],
     })
+    await logAiUsage(supabase, { feature: 'task_suggest', model: MODEL, usage: resp.usage })
     const text = resp.content.find((b) => b.type === 'text')?.text ?? '{}'
     const match = text.match(/\{[\s\S]*\}/)
     const parsed = match ? JSON.parse(match[0]) : {}

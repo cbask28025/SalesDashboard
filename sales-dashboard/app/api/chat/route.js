@@ -3,6 +3,9 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '../../../lib/supabase/server'
 import { TOOL_DEFINITIONS, READ_TOOLS, WRITE_TOOLS } from '../../../lib/anthropic/chat-tools'
 import { HANDLERS } from '../../../lib/anthropic/tool-handlers'
+import { logAiUsage } from '../../../lib/anthropic/usage'
+
+const CHAT_MODEL = 'claude-sonnet-4-6'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -93,12 +96,13 @@ export async function POST(request) {
   }
 
   const resp = await c.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: CHAT_MODEL,
     max_tokens: 1024,
     system: systemPrompt,
     tools: TOOL_DEFINITIONS,
     messages: history,
   })
+  await logAiUsage(supabase, { feature: 'chat', model: CHAT_MODEL, usage: resp.usage })
 
   await appendHistory(supabase, sessionId, 'assistant', '[mixed]', { blocks: resp.content })
 
@@ -142,12 +146,13 @@ export async function POST(request) {
   if (autoResults.length > 0) {
     // Second-round call to let Claude consume the read-tool results.
     const followup = await c.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: CHAT_MODEL,
       max_tokens: 1024,
       system: systemPrompt,
       tools: TOOL_DEFINITIONS,
       messages: [...history, { role: 'assistant', content: resp.content }, { role: 'user', content: autoResults }],
     })
+    await logAiUsage(supabase, { feature: 'chat_followup', model: CHAT_MODEL, usage: followup.usage })
     await appendHistory(supabase, sessionId, 'user', '[tool results]', { blocks: autoResults })
     await appendHistory(supabase, sessionId, 'assistant', '[final]', { blocks: followup.content })
     const finalText = followup.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim()

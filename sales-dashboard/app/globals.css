@@ -4014,3 +4014,232 @@ select:focus {
 @media (max-width: 700px) {
   .pipeline-test-row { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   v2 — AI reference documents (Settings section 5)
+   ============================================================ */
+
+.ai-docs-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ai-docs-empty {
+  padding: var(--space-lg);
+  background: var(--bg-tertiary);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.ai-doc-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: var(--space-md);
+  align-items: flex-start;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: opacity 0.12s;
+}
+
+.ai-doc-row.is-inactive { opacity: 0.55; }
+
+.ai-doc-row > svg {
+  color: var(--ctb-blue);
+  margin-top: 3px;
+}
+
+.ai-doc-info strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.ai-doc-info p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+
+.ai-doc-info span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
+  font-feature-settings: 'tnum';
+}
+
+.ai-doc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-doc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  padding-right: 8px;
+  border-right: 1px solid var(--border-default);
+  cursor: pointer;
+}
+
+.ai-doc-actions button {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-body);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-doc-actions button:hover:not(:disabled) {
+  background: var(--bg-input-hover);
+  color: var(--text-primary);
+}
+
+.ai-doc-actions .ai-doc-delete {
+  color: var(--status-hot);
+  padding: 5px 8px;
+}
+
+.ai-doc-actions .ai-doc-delete:hover:not(:disabled) {
+  background: var(--status-hot-bg);
+  border-color: var(--status-hot);
+  color: var(--status-hot);
+}
+
+.ai-docs-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.ai-docs-add:hover {
+  border-color: var(--ctb-blue);
+  color: var(--ctb-blue);
+  background: var(--ctb-blue-pale);
+}
+
+/* AI doc modal — wider than the task modal to accommodate the textarea */
+.ai-doc-modal {
+  max-width: 640px;
+  width: 100%;
+}
+
+.ai-doc-content-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ai-doc-content-toolbar .upload-btn-secondary {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   v2 — AI cost report (Settings section 6)
+   ============================================================ */
+
+.ai-cost-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-md);
+}
+
+.ai-cost-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-lg) var(--space-xl);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.ai-cost-stat span {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.ai-cost-stat strong {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  font-weight: 400;
+  font-feature-settings: 'tnum';
+}
+
+.ai-cost-stat em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 460;
+}
+
+.ai-cost-breakdown {
+  margin-top: var(--space-md);
+}
+
+.ai-cost-breakdown h5 {
+  margin-bottom: var(--space-sm);
+}
+
+.ai-cost-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ai-cost-breakdown td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.ai-cost-breakdown td:last-child {
+  text-align: right;
+  font-feature-settings: 'tnum';
+  color: var(--text-secondary);
+}
+
+.ai-cost-breakdown tr:last-child td {
+  border-bottom: none;
+  font-weight: 600;
+}
