@@ -17,6 +17,8 @@ const TERMINAL_STATUSES = new Set([
   'closed_won', 'closed_lost', 'not_interested', 'unsubscribed', 'bounced',
 ])
 
+export const PAUSE_RESUME_TERMINAL = TERMINAL_STATUSES
+
 export function canPauseSequence(lead) {
   return !TERMINAL_STATUSES.has(lead.status) && lead.status !== 'on_hold'
 }

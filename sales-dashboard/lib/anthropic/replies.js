@@ -20,13 +20,20 @@ Respond with ONLY valid JSON, no markdown.`
 // Behavioural rules for the reply drafter. The "who the AI is and how it
 // speaks" comes from the user-configurable personality stored in
 // v2_settings.assistant_system_prompt and is prepended at runtime.
-const DRAFT_BEHAVIOR = `Given the prior email thread + the prospect's reply, draft a response that:
-- For positive: confirms interest, suggests a concrete next step (call or send materials), proposes 2 specific times.
-- For question: answers the question directly, then offers a next step.
-- For negative: thanks them, leaves the door open, offers to circle back later (no pushiness).
-- For unsubscribe: confirms removal politely. One sentence.
+const DRAFT_BEHAVIOR = `Given the prior email thread + the prospect's reply, draft a response.
 
-Return ONLY plain text, no greeting fields, no preamble. Start with "Hi {first_name},".`
+STRICT GROUNDING: Only say things you can support directly from the reference materials below or the lead's own message. If the prospect asks something the reference materials don't cover, say so plainly ("I'll need to check on that and follow up") instead of inventing specifics. Do not fabricate numbers, dates, pricing, or product capabilities.
+
+Per classification:
+- positive: confirm interest, suggest a concrete next step grounded in what the reference materials describe, propose 2 specific times.
+- question: answer ONLY from the reference materials. If the answer isn't there, say so and offer to follow up.
+- negative: acknowledge, leave the door open, offer to circle back later. No pushiness.
+- unsubscribe: confirm removal politely. One sentence.
+
+FORMATTING — important:
+- Start with "Hi {first_name},"
+- Return plain text only. No greeting fields, no preamble.
+- DO NOT add a closing line, sign-off, signature, "Thanks", "Best", "Best regards", "Sincerely", or a name at the bottom. End at the last substantive sentence. The user will append their own signature.`
 
 async function loadPersonality(supabase) {
   const { data } = await supabase
@@ -92,7 +99,7 @@ export async function draftReply(supabase, replyBody, lead, classification) {
   const c = await getAnthropicClient(supabase)
   const firstName = lead.first_name || 'there'
   if (!c) {
-    return `Hi ${firstName},\n\nThanks for getting back to me. (Draft generator is offline — please reply manually.)\n\nBest,\n${process.env.SENDER_NAME || ''}`
+    return `Hi ${firstName},\n\n(AI drafter is offline — please write your reply manually.)`
   }
 
   const [personality, docContext] = await Promise.all([
@@ -126,7 +133,7 @@ ${replyBody}
     return resp.content.find((b) => b.type === 'text')?.text ?? ''
   } catch (err) {
     console.error('Reply draft failed:', err.message)
-    return `Hi ${firstName},\n\nThanks for getting back to me. I'll follow up shortly.\n\nBest,\n${process.env.SENDER_NAME || ''}`
+    return `Hi ${firstName},\n\nThanks for getting back to me. I'll follow up shortly.`
   }
 }
 

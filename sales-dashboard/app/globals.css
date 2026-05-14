@@ -3471,8 +3471,11 @@ select:focus {
   text-decoration: none;
 }
 
-/* Connected-account card — stacks vertically so buttons never crowd */
+/* Connected-account card — stacks vertically so buttons never crowd.
+   grid-column: 1 / -1 forces it to span the full width of its parent
+   .settings-fields grid (which uses auto-fill columns). */
 .account-card {
+  grid-column: 1 / -1;
   background: var(--status-success-bg);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -3480,6 +3483,14 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.settings-outlook-disconnected {
+  grid-column: 1 / -1;
+}
+
+.anthropic-key-status {
+  grid-column: 1 / -1;
 }
 
 .account-card-head {

@@ -12,6 +12,7 @@ export const maxDuration = 30
 
 const SYSTEM_PROMPT_KEY = 'assistant_system_prompt'
 const HISTORY_HOURS = 24
+const MAX_DOC_CONTEXT_CHARS = 8000
 
 async function loadSystemPrompt(supabase) {
   const { data } = await supabase
@@ -22,6 +23,30 @@ async function loadSystemPrompt(supabase) {
   return typeof data?.value === 'string'
     ? data.value
     : 'You are a professional, concise sales assistant for Choosing the Best (CTB), a K-12 health curriculum company. Always cite specific numbers and lead names rather than vague answers.'
+}
+
+async function loadReferenceDocs(supabase) {
+  const { data, error } = await supabase
+    .from('v2_ai_documents')
+    .select('name, purpose, content')
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+  if (error || !data) return ''
+  let combined = ''
+  for (const doc of data) {
+    const block = `## ${doc.name}\n_When to use: ${doc.purpose}_\n\n${doc.content}\n\n`
+    if (combined.length + block.length > MAX_DOC_CONTEXT_CHARS) break
+    combined += block
+  }
+  return combined.trim()
+}
+
+function buildChatSystemPrompt(personality, docs) {
+  const parts = [personality]
+  if (docs) {
+    parts.push(`Reference materials (cite these when answering — these are your source of truth for product, pricing, and case-study details):\n\n${docs}`)
+  }
+  return parts.filter(Boolean).join('\n\n')
 }
 
 async function loadHistory(supabase, sessionId) {
@@ -72,7 +97,11 @@ export async function POST(request) {
   const sessionId = body.sessionId
   if (!sessionId) return NextResponse.json({ ok: false, error: 'sessionId required' }, { status: 400 })
 
-  const systemPrompt = await loadSystemPrompt(supabase)
+  const [personality, docContext] = await Promise.all([
+    loadSystemPrompt(supabase),
+    loadReferenceDocs(supabase),
+  ])
+  const systemPrompt = buildChatSystemPrompt(personality, docContext)
   let history = await loadHistory(supabase, sessionId)
 
   // Two modes:
