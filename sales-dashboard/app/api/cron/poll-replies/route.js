@@ -5,6 +5,7 @@ import { createClient as createUserClient } from '../../../../lib/supabase/serve
 import { listInboxMessages } from '../../../../lib/graph/client'
 import { classifyReply, draftReply, suggestTaskFromReply } from '../../../../lib/anthropic/replies'
 import { computeUpgrade } from '../../../../lib/leads/status-transitions'
+import { extractNewReply } from '../../../../lib/email/extract-reply'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -66,22 +67,6 @@ function extractParentMessageIds(headers) {
   return ids
 }
 
-function plainTextFromHtml(html) {
-  if (!html) return ''
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
 export async function POST(request) { return run(request) }
 export async function GET(request) { return run(request) }
 
@@ -133,7 +118,10 @@ async function run(request) {
     if (existing) continue
 
     try {
-      const body = plainTextFromHtml(msg.body?.content) || msg.bodyPreview || ''
+      // Pull just the prospect's new content, stripping the quoted original
+      // (the "On <date> ... wrote: ..." block, blockquote elements, signatures).
+      const rawBody = msg.body?.content || ''
+      const body = extractNewReply(rawBody, msg.bodyPreview || '')
       const { data: lead } = await supabase
         .from('v2_leads')
         .select('*')
