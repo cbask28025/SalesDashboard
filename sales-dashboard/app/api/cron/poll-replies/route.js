@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isAuthorizedCron } from '../../../../lib/cron/auth'
+import { createClient as createUserClient } from '../../../../lib/supabase/server'
 import { listInboxMessages } from '../../../../lib/graph/client'
 import { classifyReply, draftReply, suggestTaskFromReply } from '../../../../lib/anthropic/replies'
 import { computeUpgrade } from '../../../../lib/leads/status-transitions'
@@ -14,6 +15,19 @@ function serviceClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } },
   )
+}
+
+// Allow both cron-scheduled calls (CRON_SECRET) AND authenticated browser
+// calls (signed-in user) so we can wire up a "Refresh now" button.
+async function isAuthorized(request) {
+  if (isAuthorizedCron(request)) return true
+  try {
+    const userSb = createUserClient()
+    const { data: { user } } = await userSb.auth.getUser()
+    return !!user
+  } catch {
+    return false
+  }
 }
 
 async function loadCursor(supabase) {
@@ -72,7 +86,7 @@ export async function POST(request) { return run(request) }
 export async function GET(request) { return run(request) }
 
 async function run(request) {
-  if (!isAuthorizedCron(request)) {
+  if (!await isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Send, RefreshCw, X } from 'lucide-react'
 import { fullName, relativeTime, STATUS_LABEL, TIER_LABEL } from '../../../lib/format'
@@ -14,10 +15,48 @@ const CLASSIFICATION_LABELS = {
 }
 
 export default function RepliesList({ replies: initial, activeTab, counts }) {
+  const router = useRouter()
   const [replies, setReplies] = useState(initial)
   const [drafts, setDrafts] = useState(() => Object.fromEntries(initial.map((r) => [r.id, r.ai_draft || ''])))
   const [feedback, setFeedback] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
   const [isPending, startTransition] = useTransition()
+
+  async function refreshNow() {
+    setRefreshing(true)
+    setFeedback({ type: 'ok', message: 'Polling inbox…' })
+    try {
+      const res = await fetch('/api/cron/poll-replies', { method: 'POST', credentials: 'include' })
+      const json = await res.json()
+      if (!json.ok) {
+        setFeedback({ type: 'err', message: json.error || 'Refresh failed' })
+        setRefreshing(false)
+        return
+      }
+      const summary = [
+        `Scanned ${json.scanned ?? 0} message${json.scanned === 1 ? '' : 's'}`,
+        `${json.matched ?? 0} matched to leads`,
+        `${json.processed ?? 0} new repl${json.processed === 1 ? 'y' : 'ies'}`,
+      ].join(' · ')
+      setFeedback({ type: 'ok', message: summary })
+      router.refresh()
+    } catch (err) {
+      setFeedback({ type: 'err', message: err.message || 'Refresh failed' })
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  // Auto-refresh whenever the tab regains focus — same trick the notification
+  // bell uses. Cheap (one extra request per tab activation) and keeps replies
+  // fresh without polling on a timer.
+  useEffect(() => {
+    function onFocus() {
+      router.refresh()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [router])
 
   function updateLocal(replyId, patch) {
     setReplies((prev) => prev.map((r) => r.id === replyId ? { ...r, ...patch } : r))
@@ -69,6 +108,16 @@ export default function RepliesList({ replies: initial, activeTab, counts }) {
         <Link className={`replies-tab${activeTab === 'responded' ? ' is-active' : ''}`} href="/replies?tab=responded">
           Responded <span>{counts.responded || 0}</span>
         </Link>
+        <button
+          type="button"
+          className="replies-refresh"
+          onClick={refreshNow}
+          disabled={refreshing}
+          title="Poll inbox for new replies right now"
+        >
+          <RefreshCw size={13} className={refreshing ? 'is-spinning' : ''} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
       {feedback && (

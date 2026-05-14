@@ -2664,6 +2664,40 @@ select:focus {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--border-default);
+  align-items: center;
+}
+
+.replies-refresh {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-body);
+  margin-bottom: 6px;
+}
+
+.replies-refresh:hover:not(:disabled) {
+  background: var(--bg-input-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.replies-refresh:disabled { opacity: 0.7; cursor: wait; }
+
+.replies-refresh .is-spinning {
+  animation: replies-refresh-spin 0.9s linear infinite;
+}
+
+@keyframes replies-refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 .replies-tab {
