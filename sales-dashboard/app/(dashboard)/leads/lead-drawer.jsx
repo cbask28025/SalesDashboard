@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { X, Pin, PinOff, Trash2, Copy } from 'lucide-react'
+import { X, Pin, PinOff, Trash2, Copy, Send, Pause, Play } from 'lucide-react'
 import {
   fullName, relativeTime, absoluteTime,
   STATUS_LABEL, STATUS_ORDER, TIER_LABEL,
@@ -10,8 +10,9 @@ import {
   fetchLeadDetail, addNote, deleteNote, togglePinNote,
   pauseSequence, resumeSequence, resetPipeline, deleteLeads, updateLeadStatus,
 } from './actions'
+import { canPauseSequence, canResumeSequence } from './leads-list'
 
-export default function LeadDrawer({ lead, onClose, onLeadUpdate, onLeadRemove }) {
+export default function LeadDrawer({ lead, onClose, onLeadUpdate, onLeadRemove, onSendNow }) {
   const [detail, setDetail] = useState(null)
   const [newNote, setNewNote] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -97,8 +98,21 @@ export default function LeadDrawer({ lead, onClose, onLeadUpdate, onLeadRemove }
         </header>
 
         <div className="drawer-actions-row">
-          <button onClick={() => runLeadAction(pauseSequence, { optimisticPatch: { status: 'on_hold' } })} disabled={isPending}>Pause</button>
-          <button onClick={() => runLeadAction(resumeSequence, { optimisticPatch: { status: 'sequencing' } })} disabled={isPending}>Resume</button>
+          {onSendNow && (
+            <button onClick={onSendNow} disabled={isPending}>
+              <Send size={13} /> Send now
+            </button>
+          )}
+          {canPauseSequence(lead) && (
+            <button onClick={() => runLeadAction(pauseSequence, { optimisticPatch: { status: 'on_hold' } })} disabled={isPending}>
+              <Pause size={13} /> Pause sequence
+            </button>
+          )}
+          {canResumeSequence(lead) && (
+            <button onClick={() => runLeadAction(resumeSequence, { optimisticPatch: { status: 'sequencing' } })} disabled={isPending}>
+              <Play size={13} /> Resume sequence
+            </button>
+          )}
           <button onClick={() => runLeadAction(resetPipeline, { confirm: 'Reset pipeline?', optimisticPatch: { sequence_step: 0, status: 'sequencing' } })} disabled={isPending}>Reset</button>
           <select
             disabled={isPending}

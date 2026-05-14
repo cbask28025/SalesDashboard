@@ -3542,31 +3542,36 @@ select:focus {
 }
 
 .account-card-test {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-sm);
-  align-items: end;
-  padding: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
   background: var(--bg-card);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-}
-
-.account-card-test label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+}
+
+.account-card-test > label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
+  margin: 0;
 }
 
-.account-card-test input {
+.account-card-test-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: stretch;
+}
+
+.account-card-test-row input {
+  flex: 1;
+  min-width: 0;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: 8px 12px;
   font-size: 13px;
   font-weight: 460;
   font-family: var(--font-body);
@@ -3576,12 +3581,12 @@ select:focus {
   text-transform: none;
 }
 
-.account-card-test input:focus {
+.account-card-test-row input:focus {
   outline: none;
   border-color: var(--ctb-blue);
 }
 
-.account-card-test button {
+.account-card-test-row button {
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -3645,7 +3650,119 @@ select:focus {
 @media (max-width: 700px) {
   .account-card-head { grid-template-columns: 20px 1fr; }
   .account-card-buttons { grid-column: 1 / -1; }
-  .account-card-test { grid-template-columns: 1fr; }
+  .account-card-test-row { flex-direction: column; }
+  .account-card-test-row button { width: 100%; justify-content: center; }
+}
+
+/* ============================================================
+   v2 — LEADS: top toolbar (Add lead) + Send Now / Add Lead modals
+   ============================================================ */
+
+.leads-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.leads-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ctb-blue);
+  color: var(--text-on-blue);
+  border: 1px solid var(--ctb-blue);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.leads-add-btn:hover { background: var(--ctb-blue-dark); border-color: var(--ctb-blue-dark); }
+
+.send-now-modal,
+.add-lead-modal {
+  max-width: 560px;
+}
+
+.add-lead-modal { max-width: 600px; }
+
+.send-now-warning {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: var(--ctb-gold-pale);
+  border: 1px solid var(--ctb-gold);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  color: var(--text-primary);
+}
+
+.send-now-warning svg { color: var(--ctb-gold); flex-shrink: 0; margin-top: 2px; }
+
+.send-now-warning p {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.send-now-warning strong { display: inline; color: var(--text-primary); font-weight: 600; }
+
+.send-now-skipped {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.add-lead-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.add-lead-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.add-lead-grid label.is-full { grid-column: 1 / -1; }
+
+.add-lead-grid label em {
+  font-style: normal;
+  color: var(--status-hot);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.add-lead-grid input,
+.add-lead-grid select {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 460;
+  font-family: var(--font-body);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+
+.add-lead-grid input:focus,
+.add-lead-grid select:focus {
+  outline: none;
+  border-color: var(--ctb-blue);
+}
+
+@media (max-width: 540px) {
+  .add-lead-grid { grid-template-columns: 1fr; }
 }
 
 .settings-danger { color: var(--status-hot) !important; }

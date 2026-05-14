@@ -370,24 +370,25 @@ function ConnectedAccount({ outlook, isPending, onDisconnect }) {
       </header>
 
       <div className="account-card-test">
-        <label>
-          Send a test email to
+        <label htmlFor="account-test-to">Send a test email to</label>
+        <div className="account-card-test-row">
           <input
+            id="account-test-to"
             type="email"
             value={testTo}
             onChange={(e) => setTestTo(e.target.value)}
             placeholder="your-email@example.com"
             disabled={testing || isPending}
           />
-        </label>
-        <button
-          type="button"
-          className="upload-btn-primary"
-          onClick={runTest}
-          disabled={testing || isPending || !testTo}
-        >
-          <Send size={13} /> {testing ? 'Sending…' : 'Send test'}
-        </button>
+          <button
+            type="button"
+            className="upload-btn-primary"
+            onClick={runTest}
+            disabled={testing || isPending || !testTo}
+          >
+            <Send size={13} /> {testing ? 'Sending…' : 'Send test'}
+          </button>
+        </div>
       </div>
 
       {testStatus && (
